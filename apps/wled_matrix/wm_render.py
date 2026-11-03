@@ -88,21 +88,50 @@ def pick_colour(value, row):
     return tuple(row.get("colour", (200, 200, 200)))
 
 
-def render_screen(screen, values, width=64, height=64):
-    """`screen` = {"rows": [...]}, `values` = list of floats (or None) in row order."""
+def pick_icon(value, row):
+    """A row's icon: the first `icon_thresholds` entry whose `above` the value reaches, else `icon`."""
+    for t in row.get("icon_thresholds", []):
+        if value is not None and value >= t["above"]:
+            return t["icon"]
+    return row["icon"]
+
+
+def draw_mdi(canvas, coverage, x0, y0, colour):
+    """Draw a coverage map, scaling the colour by each pixel's coverage so curved edges look smooth."""
+    for y, row in enumerate(coverage):
+        for x, a in enumerate(row):
+            if a > 0.15:
+                canvas.put(x0 + x, y0 + y, tuple(int(ch * min(1.0, a * 1.2)) for ch in colour))
+
+
+def render_screen(screen, values, width=64, height=64, mdi=None):
+    """`screen` = {"rows": [...]}, `values` = list of floats (or None) in row order.
+
+    `mdi` is an MdiIcons instance, used for icons named `mdi:<name>`.
+    """
     c = Canvas(width, height)
     rows = screen["rows"]
     pitch = height // max(1, len(rows))
     for i, (row, value) in enumerate(zip(rows, values)):
-        y0 = i * pitch + max(0, (pitch - 14) // 2)
         colour = pick_colour(value, row)
-        fill = None
-        if row.get("fill") and value is not None:
-            fill = (value / float(row.get("fill_max", 100)), colour)
         icon_colour = tuple(row["icon_colour"]) if "icon_colour" in row else colour
-        c.icon(row["icon"], 1, y0, icon_colour, fill)
+        icon = pick_icon(value, row)
+        if icon.startswith("mdi:"):
+            size = int(row.get("icon_size", min(pitch, 24)))  # default: as tall as the row
+            y0 = i * pitch + max(0, (pitch - size) // 2)
+            coverage = mdi.coverage(icon, size) if mdi else None
+            if coverage:
+                draw_mdi(c, coverage, 0, y0, icon_colour)
+            text_x, text_y = size + 3, i * pitch + max(0, (pitch - 14) // 2)
+        else:
+            y0 = i * pitch + max(0, (pitch - 14) // 2)
+            fill = None
+            if row.get("fill") and value is not None:
+                fill = (value / float(row.get("fill_max", 100)), colour)
+            c.icon(icon, 1, y0, icon_colour, fill)
+            text_x, text_y = 18, y0
         number, unit = format_value(value, row.get("format", "number"))
         unit = row.get("unit", unit)
-        end = c.big(number, 18, y0, colour)
-        c.small(unit, end, y0 + 9, colour)
+        end = c.big(number, text_x, text_y, colour)
+        c.small(unit, end, text_y + 9, colour)
     return c.px

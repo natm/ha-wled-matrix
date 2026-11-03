@@ -13,20 +13,25 @@ wled_matrix:
   screens:
     energy:
       rows:
-        - icon: battery
+        - icon: mdi:battery
+          icon_thresholds:        # pick the icon by value
+            - {above: 90, icon: mdi:battery}
+            - {above: 70, icon: mdi:battery-80}
+            - {above: 50, icon: mdi:battery-60}
+            - {above: 30, icon: mdi:battery-40}
+            - {above: 10, icon: mdi:battery-20}
+            - {above: 0, icon: mdi:battery-outline}
           entity: sensor.battery_state_of_charge
           format: percent
-          fill: true              # fill the icon to the value (0..fill_max, default 100)
-          icon_colour: [200, 200, 200]
           thresholds:             # first match from the top wins; below all of them uses `colour`
             - {above: 50, colour: [0, 190, 0]}
             - {above: 25, colour: [230, 150, 0]}
           colour: [230, 0, 0]
-        - icon: plug
+        - icon: mdi:power-plug
           entity: sensor.house_load_power
           format: power           # W, or kW from 1000 W
           colour: [255, 150, 0]
-        - icon: pylon
+        - icon: mdi:transmission-tower
           entity: sensor.grid_power
           format: power
           thresholds:

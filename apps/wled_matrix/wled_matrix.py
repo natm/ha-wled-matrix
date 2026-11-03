@@ -10,6 +10,7 @@ See README.md for the configuration.
 from appdaemon.plugins.hass.hassapi import Hass
 
 from wm_ddp import DdpSender
+from wm_mdi import MdiIcons
 from wm_render import render_screen
 
 
@@ -19,6 +20,8 @@ class WledMatrix(Hass):
         self.matrices = self.args["matrices"]
         self.refresh = float(self.args.get("refresh", 1))
         self.sender = DdpSender()
+        # Material Design Icons are downloaded once and cached here (not stored in this project).
+        self.mdi = MdiIcons(self.args.get("icon_cache", "/config/wled_matrix_cache"), log=self.log)
         self.position = {m["host"]: 0 for m in self.matrices}
         self.elapsed = {m["host"]: 0.0 for m in self.matrices}
         for m in self.matrices:
@@ -51,7 +54,7 @@ class WledMatrix(Hass):
                 self.position[host] = (self.position[host] + 1) % len(names)
             screen = self.screens[names[self.position[host]]]
             values = [self.value(row["entity"]) for row in screen["rows"]]
-            pixels = render_screen(screen, values, m.get("width", 64), m.get("height", 64))
+            pixels = render_screen(screen, values, m.get("width", 64), m.get("height", 64), self.mdi)
             try:
                 self.sender.send(host, pixels)
             except OSError as err:
