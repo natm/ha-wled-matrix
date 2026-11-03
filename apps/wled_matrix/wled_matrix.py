@@ -32,11 +32,8 @@ class WledMatrix(Hass):
         self.log(f"Driving {len(self.matrices)} matrix(es), refresh {self.refresh}s")
 
     def value(self, entity):
-        state = self.get_state(entity)
-        try:
-            return float(state)
-        except (TypeError, ValueError):
-            return None
+        """The entity's raw state; the renderer turns it into a number or on/off."""
+        return self.get_state(entity)
 
     def enabled(self, m):
         switch = m.get("enabled_entity")

@@ -10,7 +10,7 @@ An [AppDaemon](https://appdaemon.readthedocs.io/) app that shows Home Assistant 
 - **Rows or a grid:** up to three big rows, or a grid with any number of rows and columns (cells can span), each cell sizing its icon and font to fit.
 - Colours and icons can follow the value (thresholds), e.g. a battery icon and colour by charge level.
 - Several matrices, each with its own screens and dwell time; an optional on/off entity per matrix.
-- Any Home Assistant entity with a numeric state can be shown.
+- Any Home Assistant entity with a numeric state can be shown, and on/off entities (switches, lights, binary sensors) as `ON`/`OFF`.
 
 ## Install
 
@@ -74,6 +74,18 @@ wled_matrix:
           colour: [0, 110, 255]
 ```
 
+### On/off screens
+
+```yaml
+    heating:
+      rows:
+        - icon: mdi:water-boiler
+          entity: switch.immersion
+          format: onoff
+          thresholds: [{above: 1, colour: [230, 40, 0]}]   # coloured when on
+          colour: [70, 70, 70]                              # grey when off
+```
+
 ### Grid screens
 
 For more than three items, or items side by side, give a screen a `grid` and a list of `cells`. Each cell takes the same options as a row, plus its position:
@@ -102,8 +114,8 @@ Row / cell options:
 | `icon_thresholds` | List of `{above, icon}`, checked top to bottom; the first one the value reaches wins (else `icon`) |
 | `icon_size` | MDI icon size in pixels (default: the cell height, max 24) |
 | `row`, `col`, `rowspan`, `colspan` | Grid screens only: the cell's position and size (from 0) |
-| `entity` | Any entity with a numeric state. Unavailable or non-numeric shows `-` |
-| `format` | `percent` (0–100, `%`), `power` (W, or kW from 1000 W), `number` (rounded), `decimal1` / `decimal2` (that many decimals) |
+| `entity` | Any entity with a numeric state, or an on/off state with `format: onoff`. Unavailable or unknown shows `-` |
+| `format` | `percent` (0–100, `%`), `power` (W, or kW from 1000 W), `number` (rounded), `decimal1` / `decimal2` (that many decimals), `onoff` (shows `ON`/`OFF` for switches, lights and binary sensors; on counts as 1 and off as 0 for `thresholds`) |
 | `unit` | Override the unit text (characters available: `% W k C ° h`) |
 | `colour` | `[r, g, b]` default colour |
 | `thresholds` | List of `{above, colour}`, checked top to bottom; the first one the value reaches wins, so list the highest first |

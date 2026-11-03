@@ -62,10 +62,31 @@ class Canvas:
         return x
 
 
+ON_STATES = {"on", "open", "home", "heat", "heating", "true", "detected", "playing"}
+OFF_STATES = {"off", "closed", "not_home", "idle", "false", "clear", "paused", "standby"}
+
+
+def to_number(state, fmt="number"):
+    """An entity state as a number: on/off states become 1/0, numbers parse, anything else is None."""
+    if state is None:
+        return None
+    if isinstance(state, (int, float)):
+        return float(state)
+    s = str(state).strip().lower()
+    if fmt == "onoff":
+        return 1.0 if s in ON_STATES else 0.0 if s in OFF_STATES else None
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
+
 def format_value(value, fmt):
     """Return (number text, unit text) for a row."""
     if value is None:
         return "-", ""
+    if fmt == "onoff":
+        return ("ON" if value >= 1 else "OFF"), ""
     if fmt == "percent":
         return str(int(round(max(0, min(100, value))))), "%"
     if fmt == "power":  # watts in, W or kW out
@@ -176,11 +197,11 @@ def draw_cell(c, item, value, rect, mdi):
 
 
 def render_screen(screen, values, width=64, height=64, mdi=None):
-    """`screen` is a grid (`grid` + `cells`) or a list of `rows`; `values` are floats (or None) in item order.
+    """`screen` is a grid (`grid` + `cells`) or a list of `rows`; `values` are entity states (or numbers) in item order.
 
     `mdi` is an MdiIcons instance, used for icons named `mdi:<name>`.
     """
     c = Canvas(width, height)
-    for item, value, rect in zip(items(screen), values, layout(screen, width, height)):
-        draw_cell(c, item, value, rect, mdi)
+    for item, state, rect in zip(items(screen), values, layout(screen, width, height)):
+        draw_cell(c, item, to_number(state, item.get("format", "number")), rect, mdi)
     return c.px
