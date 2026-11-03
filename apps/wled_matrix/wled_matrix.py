@@ -9,6 +9,7 @@ See README.md for the configuration.
 
 from appdaemon.plugins.hass.hassapi import Hass
 
+from wm_camera import CameraSource
 from wm_ddp import DdpSender
 from wm_mdi import MdiIcons
 from wm_render import items, render_screen
@@ -22,6 +23,8 @@ class WledMatrix(Hass):
         self.sender = DdpSender()
         # Material Design Icons are downloaded once and cached here (not stored in this project).
         self.mdi = MdiIcons(self.args.get("icon_cache", "/config/wled_matrix_cache"), log=self.log)
+        # Camera screens fetch stills from Home Assistant's camera proxy (Supervisor URL and token by default).
+        self.cameras = CameraSource(self.args.get("ha_url"), self.args.get("ha_token"), log=self.log)
         self.position = {m["host"]: 0 for m in self.matrices}
         self.elapsed = {m["host"]: 0.0 for m in self.matrices}
         for m in self.matrices:
@@ -46,12 +49,20 @@ class WledMatrix(Hass):
                 continue
             names = m["screens"]
             self.elapsed[host] += self.refresh
-            if len(names) > 1 and self.elapsed[host] >= float(m.get("dwell", 10)):
+            # A screen can set its own `dwell` (e.g. longer for a camera), else the matrix's.
+            dwell = float(self.screens[names[self.position[host]]].get("dwell", m.get("dwell", 10)))
+            if len(names) > 1 and self.elapsed[host] >= dwell:
                 self.elapsed[host] = 0.0
                 self.position[host] = (self.position[host] + 1) % len(names)
             screen = self.screens[names[self.position[host]]]
-            values = [self.value(item["entity"]) if "entity" in item else None for item in items(screen)]
-            pixels = render_screen(screen, values, m.get("width", 64), m.get("height", 64), self.mdi)
+            width, height = m.get("width", 64), m.get("height", 64)
+            if "camera" in screen:
+                pixels = self.cameras.pixels(screen, width, height)
+                if pixels is None:
+                    continue  # nothing to show yet; WLED falls back to its own effect after its timeout
+            else:
+                values = [self.value(item["entity"]) if "entity" in item else None for item in items(screen)]
+                pixels = render_screen(screen, values, width, height, self.mdi)
             try:
                 self.sender.send(host, pixels)
             except OSError as err:

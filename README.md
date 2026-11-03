@@ -9,7 +9,8 @@ An [AppDaemon](https://appdaemon.readthedocs.io/) app that shows Home Assistant 
 - Sends frames to WLED over **DDP** (UDP 4048), so WLED shows them as live data. If the app stops, WLED goes back to its own effect or preset after its realtime timeout.
 - **Rows or a grid:** up to three big rows, or a grid with any number of rows and columns (cells can span), each cell sizing its icon and font to fit.
 - Colours and icons can follow the value (thresholds), e.g. a battery icon and colour by charge level.
-- Several matrices, each with its own screens and dwell time; an optional on/off entity per matrix.
+- Several matrices, each with its own screens and dwell time (a screen can set its own); an optional on/off entity per matrix.
+- **Camera screens:** a Home Assistant camera's still, refreshed every `refresh` seconds while the screen is shown (needs Pillow).
 - Any Home Assistant entity with a numeric state can be shown, and on/off entities (switches, lights, binary sensors) as `on`/`off`.
 
 ## Install
@@ -122,9 +123,30 @@ Row / cell options:
 | `format` | `percent` (0–100, `%`), `power` (W, or kW from 1000 W), `number` (rounded), `decimal1` / `decimal2` (that many decimals), `mbps` (Mbit/s in: `M` with one decimal below 10, whole numbers to 999, then `G` in Gbit/s), `onoff` (shows `on`/`off` for switches, lights and binary sensors; on counts as 1 and off as 0 for `thresholds`) |
 | `unit` | Override the unit text (characters available: `% W k C ° h M G`) |
 | `colour` | `[r, g, b]` default colour |
+| `dwell` | Screen level: seconds this screen stays up in the rotation (default: the matrix's `dwell`) |
 | `thresholds` | List of `{above, colour}`, checked top to bottom; the first one the value reaches wins, so list the highest first |
 | `fill`, `fill_max` | Built-in icons only: fill the icon's fill area in proportion to the value (default max 100) |
 | `icon_colour` | Draw the icon outline in a fixed colour instead of the row colour |
+
+### Camera screens
+
+A screen with `camera:` shows that camera's current still, scaled to the matrix and refreshed every `refresh` seconds while it's on display (nothing is fetched while other screens show). The still comes from Home Assistant's camera proxy, which scales it down first; matrices showing the same camera share one fetch, and if a fetch fails the last good frame stays up.
+
+```yaml
+  screens:
+    drive:
+      camera: camera.drive          # any camera entity
+      dwell: 15                     # optional: this screen's time in the rotation (overrides the matrix's dwell)
+      fit: crop                     # crop (fill, cut the sides of a wide picture; default) or letterbox
+      # autocontrast: true          # default: stretch the levels; makes dim and night-time infrared pictures readable
+      # brightness: 1.0             # 1.0 = unchanged
+      # contrast: 1.0
+      # gamma: 1.0                  # above 1 darkens the mid-tones
+```
+
+Camera screens need **Pillow**: on Home Assistant OS, add `Pillow` to the AppDaemon app's `python_packages` option and restart it. The app reaches Home Assistant through the Supervisor (no token needed); elsewhere, set `ha_url` and `ha_token` (a long-lived access token) on the app.
+
+At 64×64 you'll recognise the scene (a car on the drive, someone at the door), not faces.
 
 ## Updating
 
