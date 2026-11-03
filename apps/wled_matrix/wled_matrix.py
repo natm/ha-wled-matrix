@@ -11,7 +11,7 @@ from appdaemon.plugins.hass.hassapi import Hass
 
 from wm_ddp import DdpSender
 from wm_mdi import MdiIcons
-from wm_render import render_screen
+from wm_render import items, render_screen
 
 
 class WledMatrix(Hass):
@@ -53,7 +53,7 @@ class WledMatrix(Hass):
                 self.elapsed[host] = 0.0
                 self.position[host] = (self.position[host] + 1) % len(names)
             screen = self.screens[names[self.position[host]]]
-            values = [self.value(row["entity"]) for row in screen["rows"]]
+            values = [self.value(item["entity"]) for item in items(screen)]
             pixels = render_screen(screen, values, m.get("width", 64), m.get("height", 64), self.mdi)
             try:
                 self.sender.send(host, pixels)

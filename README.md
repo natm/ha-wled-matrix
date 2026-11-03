@@ -1,6 +1,6 @@
 # WLED Matrix
 
-An [AppDaemon](https://appdaemon.readthedocs.io/) app that shows Home Assistant values on **WLED LED matrices** (e.g. the 64×64 [Apollo M-1](https://apolloautomation.com/)) as simple screens: up to three rows of **icon + big number + unit**, with screens on rotation.
+An [AppDaemon](https://appdaemon.readthedocs.io/) app that shows Home Assistant values on **WLED LED matrices** (e.g. the 64×64 [Apollo M-1](https://apolloautomation.com/)) as simple screens of **icon + number + unit** items, laid out in rows or a grid, with screens on rotation.
 
 ![energy screen: battery 41%, load 8.2 kW, grid 0 W](docs/energy.png)
 
@@ -72,13 +72,34 @@ wled_matrix:
           colour: [0, 110, 255]
 ```
 
-Row options:
+### Grid screens
+
+For more than three items, or items side by side, give a screen a `grid` and a list of `cells`. Each cell takes the same options as a row, plus its position:
+
+```yaml
+  screens:
+    overview:
+      grid: {rows: 4, columns: 2}
+      cells:
+        - {row: 0, col: 0, icon: mdi:battery-40, entity: sensor.battery_soc, format: percent}
+        - {row: 0, col: 1, icon: mdi:thermometer, entity: sensor.outside_temperature, format: decimal1, unit: C}
+        - {row: 1, col: 0, colspan: 2, icon: mdi:power-plug, entity: sensor.house_load_power, format: power}
+        - {row: 2, col: 0, icon: mdi:transmission-tower, entity: sensor.grid_power, format: power}
+        - {row: 2, col: 1, icon: mdi:solar-power, entity: sensor.pv_power, format: power}
+```
+
+Each cell sizes itself: the icon follows the cell height (up to 24 px), and the number uses big digits when they fit, otherwise the small font. The unit is left out if there's no room. `rowspan` and `colspan` merge cells. Screens with `rows` (as above) are a one-column grid.
+
+![a 4x2 grid next to the 3-row screen](docs/grid.png)
+
+Row / cell options:
 
 | Key | Meaning |
 |---|---|
-| `icon` | Any Material Design Icon as `mdi:<name>`, or a built-in pixel icon: `battery`, `plug`, `pylon`, `sun`, `thermometer` (these work offline) |
+| `icon` | `none` for no icon, any Material Design Icon as `mdi:<name>`, or a built-in pixel icon: `battery`, `plug`, `pylon`, `sun`, `thermometer` (these work offline) |
 | `icon_thresholds` | List of `{above, icon}`, checked top to bottom; the first one the value reaches wins (else `icon`) |
-| `icon_size` | MDI icon size in pixels (default: the row height, max 24) |
+| `icon_size` | MDI icon size in pixels (default: the cell height, max 24) |
+| `row`, `col`, `rowspan`, `colspan` | Grid screens only: the cell's position and size (from 0) |
 | `entity` | Any entity with a numeric state. Unavailable or non-numeric shows `-` |
 | `format` | `percent` (0–100, `%`), `power` (W, or kW from 1000 W), `number`, `decimal1` |
 | `unit` | Override the unit text (characters available: `% W k C ° h`) |

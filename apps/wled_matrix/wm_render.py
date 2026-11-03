@@ -1,4 +1,4 @@
-"""Draw a screen of rows (icon + big number + small unit) into a width x height RGB frame.
+"""Draw a screen of items (icon + number + unit) laid out in rows or a grid, into a width x height RGB frame.
 
 Pure Python, no dependencies. A frame is a list of (r, g, b) tuples, row by row.
 """
@@ -104,34 +104,83 @@ def draw_mdi(canvas, coverage, x0, y0, colour):
                 canvas.put(x0 + x, y0 + y, tuple(int(ch * min(1.0, a * 1.2)) for ch in colour))
 
 
+def text_width(text, font, scale=1):
+    widths = [(len(font[ch][0]) + 1) * scale for ch in text if ch in font]
+    return sum(widths) - scale if widths else 0
+
+
+def items(screen):
+    """A screen's items in value order: grid `cells`, or legacy `rows` (one full-width cell per row)."""
+    return screen["cells"] if "cells" in screen else screen["rows"]
+
+
+def layout(screen, width, height):
+    """Pixel rectangle (x, y, w, h) for each item.
+
+    Grid screens: `grid: {rows, columns}`, and each cell gives `row`, `col`, optional `rowspan`, `colspan`.
+    Legacy screens with `rows` are a one-column grid.
+    """
+    if "cells" in screen:
+        grid = screen.get("grid", {})
+        nrows, ncols = int(grid.get("rows", 1)), int(grid.get("columns", 1))
+        cells = screen["cells"]
+        places = [(int(c.get("row", 0)), int(c.get("col", 0)), int(c.get("rowspan", 1)), int(c.get("colspan", 1)))
+                  for c in cells]
+    else:
+        nrows, ncols = len(screen["rows"]), 1
+        places = [(i, 0, 1, 1) for i in range(nrows)]
+
+    def edge(n, count, total):  # integer cell boundaries that use the whole display
+        return n * total // count
+
+    return [(edge(c, ncols, width), edge(r, nrows, height),
+             edge(c + cs, ncols, width) - edge(c, ncols, width),
+             edge(r + rs, nrows, height) - edge(r, nrows, height)) for r, c, rs, cs in places]
+
+
+def draw_cell(c, item, value, rect, mdi):
+    """Icon on the left, then the number and unit, sized to fit the cell."""
+    x, y, w, h = rect
+    colour = pick_colour(value, item)
+    icon_colour = tuple(item["icon_colour"]) if "icon_colour" in item else colour
+    icon = pick_icon(value, item) if item.get("icon") or item.get("icon_thresholds") else None
+    text_x = x
+    if icon and icon != "none":
+        if icon.startswith("mdi:"):
+            size = int(item.get("icon_size", min(h, 24, max(7, w // 3))))
+            coverage = mdi.coverage(icon, size) if mdi else None
+            if coverage:
+                draw_mdi(c, coverage, x, y + (h - size) // 2, icon_colour)
+            text_x = x + size + (3 if size >= 14 else 1)
+        else:
+            fill = None
+            if item.get("fill") and value is not None:
+                fill = (value / float(item.get("fill_max", 100)), colour)
+            c.icon(icon, x + 1, y + (h - 14) // 2, icon_colour, fill)
+            text_x = x + 18
+    number, unit = format_value(value, item.get("format", "number"))
+    unit = item.get("unit", unit)
+    room = x + w - text_x
+    unit_w = text_width(unit, SMALL)
+    # Big digits (2x, 14 px tall) when they fit, else the same font at 1x (7 px); drop the unit if still too wide.
+    for scale in (2, 1):
+        num_w = text_width(number, BIG, scale)
+        if h >= 7 * scale and num_w + (unit_w + 1 if unit else 0) <= room:
+            break
+    else:
+        scale, unit = 1, ""
+    ty = y + (h - 7 * scale) // 2
+    end = c.big(number, text_x, ty, colour, scale)
+    if unit:
+        c.small(unit, end, ty + 7 * scale - 5, colour)
+
+
 def render_screen(screen, values, width=64, height=64, mdi=None):
-    """`screen` = {"rows": [...]}, `values` = list of floats (or None) in row order.
+    """`screen` is a grid (`grid` + `cells`) or a list of `rows`; `values` are floats (or None) in item order.
 
     `mdi` is an MdiIcons instance, used for icons named `mdi:<name>`.
     """
     c = Canvas(width, height)
-    rows = screen["rows"]
-    pitch = height // max(1, len(rows))
-    for i, (row, value) in enumerate(zip(rows, values)):
-        colour = pick_colour(value, row)
-        icon_colour = tuple(row["icon_colour"]) if "icon_colour" in row else colour
-        icon = pick_icon(value, row)
-        if icon.startswith("mdi:"):
-            size = int(row.get("icon_size", min(pitch, 24)))  # default: as tall as the row
-            y0 = i * pitch + max(0, (pitch - size) // 2)
-            coverage = mdi.coverage(icon, size) if mdi else None
-            if coverage:
-                draw_mdi(c, coverage, 0, y0, icon_colour)
-            text_x, text_y = size + 3, i * pitch + max(0, (pitch - 14) // 2)
-        else:
-            y0 = i * pitch + max(0, (pitch - 14) // 2)
-            fill = None
-            if row.get("fill") and value is not None:
-                fill = (value / float(row.get("fill_max", 100)), colour)
-            c.icon(icon, 1, y0, icon_colour, fill)
-            text_x, text_y = 18, y0
-        number, unit = format_value(value, row.get("format", "number"))
-        unit = row.get("unit", unit)
-        end = c.big(number, text_x, text_y, colour)
-        c.small(unit, end, text_y + 9, colour)
+    for item, value, rect in zip(items(screen), values, layout(screen, width, height)):
+        draw_cell(c, item, value, rect, mdi)
     return c.px
