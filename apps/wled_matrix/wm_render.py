@@ -200,7 +200,8 @@ def draw_cell(c, item, value, rect, mdi):
     room = x + w - text_x
     unit_w = text_width(unit, SMALL)
     # Big digits (2x, 14 px tall) when they fit, else the same font at 1x (7 px); drop the unit if still too wide.
-    for scale in (2, 1):
+    scales = (1,) if item.get("font") == "small" else (2, 1)  # `font: small` keeps rows consistent
+    for scale in scales:
         num_w = text_width(number, BIG, scale)
         if h >= 7 * scale and num_w + (unit_w + 1 if unit else 0) <= room:
             break

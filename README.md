@@ -114,6 +114,7 @@ Row / cell options:
 |---|---|
 | `icon` | `none` for no icon, any Material Design Icon as `mdi:<name>`, or a built-in pixel icon: `battery`, `plug`, `pylon`, `sun`, `thermometer` (these work offline) |
 | `icon_thresholds` | List of `{above, icon}`, checked top to bottom; the first one the value reaches wins (else `icon`) |
+| `font` | `small` always uses the small font (default: big when it fits), so neighbouring cells match |
 | `show_value` | `false` shows only the icon, centred and coloured by `thresholds` (e.g. a switch's status icon) |
 | `icon_size` | MDI icon size in pixels (default: the cell height, max 24) |
 | `row`, `col`, `rowspan`, `colspan` | Grid screens only: the cell's position and size (from 0) |
