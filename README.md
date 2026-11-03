@@ -10,7 +10,7 @@ An [AppDaemon](https://appdaemon.readthedocs.io/) app that shows Home Assistant 
 - **Rows or a grid:** up to three big rows, or a grid with any number of rows and columns (cells can span), each cell sizing its icon and font to fit.
 - Colours and icons can follow the value (thresholds), e.g. a battery icon and colour by charge level.
 - Several matrices, each with its own screens and dwell time; an optional on/off entity per matrix.
-- Any Home Assistant entity with a numeric state can be shown, and on/off entities (switches, lights, binary sensors) as `ON`/`OFF`.
+- Any Home Assistant entity with a numeric state can be shown, and on/off entities (switches, lights, binary sensors) as `on`/`off`.
 
 ## Install
 
@@ -102,7 +102,7 @@ For more than three items, or items side by side, give a screen a `grid` and a l
         - {row: 2, col: 1, icon: mdi:solar-power, entity: sensor.pv_power, format: power}
 ```
 
-A cell without an `entity` shows just its icon, centred: handy as a label for the cells next to it (e.g. a `mdi:cable-data` cell spanning two rows beside download and upload rates).
+A cell without an `entity` (or with `show_value: false`) shows just its icon, centred: handy as a label for the cells next to it (e.g. a `mdi:cable-data` cell spanning two rows beside download and upload rates).
 
 Each cell sizes itself: the icon follows the cell height (up to 24 px), and the number uses big digits when they fit, otherwise the small font. The unit is left out if there's no room. `rowspan` and `colspan` merge cells. Screens with `rows` (as above) are a one-column grid.
 
@@ -114,10 +114,11 @@ Row / cell options:
 |---|---|
 | `icon` | `none` for no icon, any Material Design Icon as `mdi:<name>`, or a built-in pixel icon: `battery`, `plug`, `pylon`, `sun`, `thermometer` (these work offline) |
 | `icon_thresholds` | List of `{above, icon}`, checked top to bottom; the first one the value reaches wins (else `icon`) |
+| `show_value` | `false` shows only the icon, centred and coloured by `thresholds` (e.g. a switch's status icon) |
 | `icon_size` | MDI icon size in pixels (default: the cell height, max 24) |
 | `row`, `col`, `rowspan`, `colspan` | Grid screens only: the cell's position and size (from 0) |
 | `entity` | Leave out for an icon-only cell. Any entity with a numeric state, or an on/off state with `format: onoff`. Unavailable or unknown shows `-` |
-| `format` | `percent` (0–100, `%`), `power` (W, or kW from 1000 W), `number` (rounded), `decimal1` / `decimal2` (that many decimals), `mbps` (Mbit/s in: `M` with one decimal below 10, whole numbers to 999, then `G` in Gbit/s), `onoff` (shows `ON`/`OFF` for switches, lights and binary sensors; on counts as 1 and off as 0 for `thresholds`) |
+| `format` | `percent` (0–100, `%`), `power` (W, or kW from 1000 W), `number` (rounded), `decimal1` / `decimal2` (that many decimals), `mbps` (Mbit/s in: `M` with one decimal below 10, whole numbers to 999, then `G` in Gbit/s), `onoff` (shows `on`/`off` for switches, lights and binary sensors; on counts as 1 and off as 0 for `thresholds`) |
 | `unit` | Override the unit text (characters available: `% W k C ° h M G`) |
 | `colour` | `[r, g, b]` default colour |
 | `thresholds` | List of `{above, colour}`, checked top to bottom; the first one the value reaches wins, so list the highest first |

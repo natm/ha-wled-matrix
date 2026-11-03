@@ -86,7 +86,7 @@ def format_value(value, fmt):
     if value is None:
         return "-", ""
     if fmt == "onoff":
-        return ("ON" if value >= 1 else "OFF"), ""
+        return ("on" if value >= 1 else "off"), ""
     if fmt == "percent":
         return str(int(round(max(0, min(100, value))))), "%"
     if fmt == "power":  # watts in, W or kW out
@@ -172,7 +172,8 @@ def draw_cell(c, item, value, rect, mdi):
     icon_colour = tuple(item["icon_colour"]) if "icon_colour" in item else colour
     icon = pick_icon(value, item) if item.get("icon") or item.get("icon_thresholds") else None
     text_x = x
-    if "entity" not in item:  # icon-only cell, e.g. a label for the cells next to it: centre the icon
+    if "entity" not in item or item.get("show_value") is False:
+        # Icon-only cell, centred: a label (no entity), or a status icon coloured by its entity's value.
         if icon and icon.startswith("mdi:") and mdi:
             size = int(item.get("icon_size", min(h, w, 24)))
             coverage = mdi.coverage(icon, size)
