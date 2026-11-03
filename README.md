@@ -17,6 +17,16 @@ An [AppDaemon](https://appdaemon.readthedocs.io/) app that shows Home Assistant 
 
 Then add a config to your `apps.yaml`.
 
+**Restart AppDaemon once after the first install.** AppDaemon only scans for new app folders when it starts. Later updates to the files reload by themselves.
+
+**Home Assistant OS, AppDaemon app 0.15 or later:** AppDaemon reads apps from its own folder, not from `/config/appdaemon/apps` where HACS installs them. Point it there with `app_dir: /homeassistant/appdaemon/apps` in `appdaemon.yaml`, e.g. with the app's `init_commands` option:
+
+```yaml
+init_commands:
+  - mkdir -p /homeassistant/appdaemon/apps
+  - "grep -q '^  app_dir:' /config/appdaemon.yaml || sed -i 's|^appdaemon:|appdaemon:\\n  app_dir: /homeassistant/appdaemon/apps|' /config/appdaemon.yaml"
+```
+
 ## Configuration
 
 ```yaml
