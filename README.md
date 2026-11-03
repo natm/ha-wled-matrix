@@ -18,7 +18,7 @@ An [AppDaemon](https://appdaemon.readthedocs.io/) app that shows Home Assistant 
 
 Then add a config to your `apps.yaml`.
 
-**Restart AppDaemon once after the first install.** AppDaemon only scans for new app folders when it starts. Later updates to the files reload by themselves.
+**Restart AppDaemon after installing or updating the app.** AppDaemon only scans for new app folders at start-up, and it reloads `wled_matrix.py` but not its helper modules (`wm_*.py`), so an update can leave them out of step until a restart. Changes to your `apps.yaml` reload by themselves.
 
 **Home Assistant OS, AppDaemon app 0.15 or later:** AppDaemon reads apps from its own folder, not from `/config/appdaemon/apps` where HACS installs them. Point it there with `app_dir: /homeassistant/appdaemon/apps` in `appdaemon.yaml`, e.g. with the app's `init_commands` option:
 
