@@ -102,6 +102,8 @@ For more than three items, or items side by side, give a screen a `grid` and a l
         - {row: 2, col: 1, icon: mdi:solar-power, entity: sensor.pv_power, format: power}
 ```
 
+A cell without an `entity` shows just its icon, centred: handy as a label for the cells next to it (e.g. a `mdi:cable-data` cell spanning two rows beside download and upload rates).
+
 Each cell sizes itself: the icon follows the cell height (up to 24 px), and the number uses big digits when they fit, otherwise the small font. The unit is left out if there's no room. `rowspan` and `colspan` merge cells. Screens with `rows` (as above) are a one-column grid.
 
 ![a 4x2 grid next to the 3-row screen](docs/grid.png)
@@ -114,9 +116,9 @@ Row / cell options:
 | `icon_thresholds` | List of `{above, icon}`, checked top to bottom; the first one the value reaches wins (else `icon`) |
 | `icon_size` | MDI icon size in pixels (default: the cell height, max 24) |
 | `row`, `col`, `rowspan`, `colspan` | Grid screens only: the cell's position and size (from 0) |
-| `entity` | Any entity with a numeric state, or an on/off state with `format: onoff`. Unavailable or unknown shows `-` |
-| `format` | `percent` (0–100, `%`), `power` (W, or kW from 1000 W), `number` (rounded), `decimal1` / `decimal2` (that many decimals), `onoff` (shows `ON`/`OFF` for switches, lights and binary sensors; on counts as 1 and off as 0 for `thresholds`) |
-| `unit` | Override the unit text (characters available: `% W k C ° h`) |
+| `entity` | Leave out for an icon-only cell. Any entity with a numeric state, or an on/off state with `format: onoff`. Unavailable or unknown shows `-` |
+| `format` | `percent` (0–100, `%`), `power` (W, or kW from 1000 W), `number` (rounded), `decimal1` / `decimal2` (that many decimals), `mbps` (Mbit/s in: `M` with one decimal below 10, whole numbers to 999, then `G` in Gbit/s), `onoff` (shows `ON`/`OFF` for switches, lights and binary sensors; on counts as 1 and off as 0 for `thresholds`) |
+| `unit` | Override the unit text (characters available: `% W k C ° h M G`) |
 | `colour` | `[r, g, b]` default colour |
 | `thresholds` | List of `{above, colour}`, checked top to bottom; the first one the value reaches wins, so list the highest first |
 | `fill`, `fill_max` | Built-in icons only: fill the icon's fill area in proportion to the value (default max 100) |

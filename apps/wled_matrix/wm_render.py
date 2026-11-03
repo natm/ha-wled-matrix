@@ -94,6 +94,12 @@ def format_value(value, fmt):
         if abs(w) >= 1000:
             return f"{w / 1000:.1f}", "kW"
         return str(w), "W"
+    if fmt == "mbps":  # Mbit/s in: 1 decimal below 10, whole numbers to 999, then Gbit/s
+        if abs(value) >= 1000:
+            return f"{value / 1000:.1f}", "G"
+        if abs(value) < 10:
+            return f"{value:.1f}", "M"
+        return str(int(round(value))), "M"
     if fmt == "number":
         return str(int(round(value))), ""
     if fmt.startswith("decimal"):  # e.g. decimal1
@@ -166,6 +172,15 @@ def draw_cell(c, item, value, rect, mdi):
     icon_colour = tuple(item["icon_colour"]) if "icon_colour" in item else colour
     icon = pick_icon(value, item) if item.get("icon") or item.get("icon_thresholds") else None
     text_x = x
+    if "entity" not in item:  # icon-only cell, e.g. a label for the cells next to it: centre the icon
+        if icon and icon.startswith("mdi:") and mdi:
+            size = int(item.get("icon_size", min(h, w, 24)))
+            coverage = mdi.coverage(icon, size)
+            if coverage:
+                draw_mdi(c, coverage, x + (w - size) // 2, y + (h - size) // 2, icon_colour)
+        elif icon and icon in ICONS:
+            c.icon(icon, x + (w - 14) // 2, y + (h - 14) // 2, icon_colour)
+        return
     if icon and icon != "none":
         if icon.startswith("mdi:"):
             size = int(item.get("icon_size", min(h, 24, max(7, w // 3))))
