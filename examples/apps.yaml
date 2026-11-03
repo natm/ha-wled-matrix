@@ -1,0 +1,34 @@
+# Example AppDaemon config (apps.yaml). Shows energy values from Home Assistant on a 64x64 WLED matrix.
+wled_matrix:
+  module: wled_matrix
+  class: WledMatrix
+  refresh: 1            # seconds between frames (keep below WLED's ~2.5 s realtime timeout)
+  matrices:
+    - host: 192.168.1.50          # the WLED device
+      width: 64
+      height: 64
+      dwell: 10                   # seconds per screen when there's more than one
+      screens: [energy]
+      # enabled_entity: input_boolean.kitchen_matrix_dashboard   # optional on/off switch
+  screens:
+    energy:
+      rows:
+        - icon: battery
+          entity: sensor.battery_state_of_charge
+          format: percent
+          fill: true              # fill the icon to the value (0..fill_max, default 100)
+          icon_colour: [200, 200, 200]
+          thresholds:             # first match from the top wins; below all of them uses `colour`
+            - {above: 50, colour: [0, 190, 0]}
+            - {above: 25, colour: [230, 150, 0]}
+          colour: [230, 0, 0]
+        - icon: plug
+          entity: sensor.house_load_power
+          format: power           # W, or kW from 1000 W
+          colour: [255, 150, 0]
+        - icon: pylon
+          entity: sensor.grid_power
+          format: power
+          thresholds:
+            - {above: 50, colour: [230, 0, 0]}    # importing
+          colour: [0, 110, 255]
