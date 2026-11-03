@@ -7,8 +7,10 @@ An [AppDaemon](https://appdaemon.readthedocs.io/) app that shows Home Assistant 
 - Draws everything itself in pure Python (pixel fonts; no Pillow needed).
 - Uses **any [Material Design Icon](https://pictogrammers.com/library/mdi/)**, like Home Assistant (`mdi:transmission-tower`). Icons aren't stored here: the official `@mdi/js` package is downloaded once from jsDelivr, cached, and each icon is converted to pixels on the fly, with smoothed edges.
 - Sends frames to WLED over **DDP** (UDP 4048), so WLED shows them as live data. If the app stops, WLED goes back to its own effect or preset after its realtime timeout.
-- Colours can follow the value (thresholds), and an icon can fill to the value (e.g. a battery).
+- **Rows or a grid:** up to three big rows, or a grid with any number of rows and columns (cells can span), each cell sizing its icon and font to fit.
+- Colours and icons can follow the value (thresholds), e.g. a battery icon and colour by charge level.
 - Several matrices, each with its own screens and dwell time; an optional on/off entity per matrix.
+- Any Home Assistant entity with a numeric state can be shown.
 
 ## Install
 
@@ -16,7 +18,7 @@ An [AppDaemon](https://appdaemon.readthedocs.io/) app that shows Home Assistant 
 
 **Manual:** copy `apps/wled_matrix/` into your AppDaemon `apps` folder.
 
-Then add a config to your `apps.yaml`.
+Then add a config to your `apps.yaml` (see below, and [`examples/apps.yaml`](examples/apps.yaml)).
 
 **Restart AppDaemon after installing or updating the app.** AppDaemon only scans for new app folders at start-up, and it reloads `wled_matrix.py` but not its helper modules (`wm_*.py`), so an update can leave them out of step until a restart. Changes to your `apps.yaml` reload by themselves.
 
@@ -101,12 +103,23 @@ Row / cell options:
 | `icon_size` | MDI icon size in pixels (default: the cell height, max 24) |
 | `row`, `col`, `rowspan`, `colspan` | Grid screens only: the cell's position and size (from 0) |
 | `entity` | Any entity with a numeric state. Unavailable or non-numeric shows `-` |
-| `format` | `percent` (0–100, `%`), `power` (W, or kW from 1000 W), `number`, `decimal1` |
+| `format` | `percent` (0–100, `%`), `power` (W, or kW from 1000 W), `number` (rounded), `decimal1` / `decimal2` (that many decimals) |
 | `unit` | Override the unit text (characters available: `% W k C ° h`) |
 | `colour` | `[r, g, b]` default colour |
-| `thresholds` | List of `{above, colour}`, checked top to bottom; the first one the value reaches wins |
+| `thresholds` | List of `{above, colour}`, checked top to bottom; the first one the value reaches wins, so list the highest first |
 | `fill`, `fill_max` | Built-in icons only: fill the icon's fill area in proportion to the value (default max 100) |
 | `icon_colour` | Draw the icon outline in a fixed colour instead of the row colour |
+
+## Updating
+
+Update through HACS (or copy the new files), then **restart AppDaemon** so all the app's modules reload together.
+
+## Troubleshooting
+
+- **Nothing on the matrix:** check AppDaemon's log for `wled_matrix` lines (on HAOS: Settings → Apps → AppDaemon → Log). It should say `Driving N matrix(es)`.
+- **Is WLED receiving?** Open `http://<wled-host>/json/info`: `"live": true` and `"lm": "DDP"` mean frames are arriving, and `"lip"` shows from where.
+- **An icon is missing:** check the name at [pictogrammers.com/library/mdi](https://pictogrammers.com/library/mdi/) and use it as `mdi:<name>`. Unknown names draw no icon.
+- **A value shows `-`:** the entity is unavailable or its state isn't a number.
 
 ## Notes
 
