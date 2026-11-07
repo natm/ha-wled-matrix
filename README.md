@@ -167,6 +167,7 @@ A screen with `aircraft:` shows the aircraft around a home point, from your own 
         latitude: 51.5007            # home point; default: Home Assistant's zone.home
         longitude: -0.1246
         range_km: 100                # radar: distance to the edge of the panel
+        # coastline: /config/coastline.geojson   # radar: coast outline to scale (see below)
 ```
 
 | Style | What it shows |
@@ -186,12 +187,13 @@ A screen with `aircraft:` shows the aircraft around a home point, from your own 
 |---|---|---|
 | `range_km` | 100 | Radar: distance from home to the edge |
 | `rings_km` | quarter, half, full range | Radar rings |
+| `coastline` | none | Radar: a GeoJSON file of coastlines (or any lines: LineString, MultiLineString, Polygon outlines, lon/lat) drawn to scale round home, so you can see where the aircraft are. E.g. clip [Natural Earth](https://www.naturalearthdata.com/)'s public-domain 1:10m coastline to your area; the file is read once |
 | `show_count`, `show_range` | true | Radar: the aircraft count and the range label |
 | `max_age` | 15 | Ignore aircraft whose last position is older than this (seconds) |
 | `page_seconds`, `ticker_count` | 3, 5 | Nearest: how long each other aircraft shows on the bottom line, and how many |
 | `flash` | true | Alert: flash the border once a second (never at night, see below) |
 | `altitude_colours` | orange < 5,000 ft, green < 20,000 ft, cyan < 33,000 ft, blue above | List of `{below: <feet>, colour: [r, g, b]}`, the last without `below` |
-| `colours` | | Override any of `ring`, `house`, `text`, `label`, `accent` (alert and highlights), `ticker`, `ground`, `marker` |
+| `colours` | | Override any of `ring`, `house`, `text`, `label`, `accent` (alert and highlights), `ticker`, `ground`, `marker`, `coast` |
 
 Positions update once a second (the receiver's rate), so dots and numbers move at the frame rate; there's no animation between frames.
 

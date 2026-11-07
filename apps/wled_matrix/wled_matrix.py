@@ -123,7 +123,7 @@ class WledMatrix(Hass):
         home = (cfg.get("latitude", self.get_state("zone.home", attribute="latitude")),
                 cfg.get("longitude", self.get_state("zone.home", attribute="longitude")))
         home = tuple(map(float, home)) if None not in home else None
-        return normalise(items, cfg, home, float(cfg.get("max_age", 15)))
+        return normalise(items, cfg, home, float(cfg.get("max_age", 15))), home
 
     def tick(self, kwargs):
         night = self.is_night()
@@ -143,7 +143,8 @@ class WledMatrix(Hass):
                     continue  # nothing to show yet; WLED falls back to its own effect after its timeout
             elif "aircraft" in screen:
                 cfg = screen["aircraft"]
-                pixels = render_aircraft(cfg, self.aircraft_list(cfg), width, height, self.mdi, night=night)
+                planes, home = self.aircraft_list(cfg)
+                pixels = render_aircraft(cfg, planes, width, height, self.mdi, night=night, home=home, log=self.log)
             else:
                 values = [self.value(item["entity"]) if "entity" in item else None for item in items(screen)]
                 pixels = render_screen(screen, values, width, height, self.mdi)

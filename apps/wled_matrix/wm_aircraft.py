@@ -32,6 +32,7 @@ SQUAWKS = {"7500": "HIJACK", "7600": "NO RADIO", "7700": "EMERGENCY"}
 DEFAULT_COLOURS = {
     "ring": [0, 45, 18], "house": [210, 210, 210], "text": [110, 110, 110], "label": [210, 210, 210],
     "accent": [255, 170, 0], "ticker": [0, 150, 255], "ground": [90, 90, 90], "marker": [150, 150, 150],
+    "coast": [0, 55, 110],
 }
 DEFAULT_BANDS = [  # first band whose `below` (feet) the height is under; the last one has no `below`
     {"below": 5000, "colour": [255, 120, 0]},
@@ -111,6 +112,55 @@ def local_reason(p, rules):
     return None
 
 
+_COAST = {}  # (path, home, range, width, height) -> list of pixels
+
+
+def coastline_pixels(path, home, range_km, width, height, log=print):
+    """Pixels of a GeoJSON coastline (LineString / MultiLineString / Polygon outlines, lon/lat) projected onto the
+    radar: home in the middle, `range_km` to the radar's radius. Cached; the file is read once."""
+    key = (path, home, range_km, width, height)
+    if key in _COAST:
+        return _COAST[key]
+    pixels = set()
+    try:
+        with open(path) as f:
+            data = json.load(f)
+    except (OSError, ValueError) as err:
+        log(f"coastline {path}: {err}", level="WARNING")
+        _COAST[key] = []
+        return []
+    features = data.get("features", [data]) if isinstance(data, dict) else []
+    lines = []
+    for feature in features:
+        geom = feature.get("geometry", feature)
+        kind, coords = geom.get("type"), geom.get("coordinates", [])
+        if kind == "LineString":
+            lines.append(coords)
+        elif kind in ("MultiLineString", "Polygon"):
+            lines.extend(coords)
+        elif kind == "MultiPolygon":
+            for poly in coords:
+                lines.extend(poly)
+    cx, cy = width // 2, height // 2
+    scale = (min(width, height) // 2 - 2) / float(range_km)
+    kx = math.cos(math.radians(home[0])) * 111.32 * scale
+    ky = 110.574 * scale
+
+    def project(pt):
+        return cx + (pt[0] - home[1]) * kx, cy - (pt[1] - home[0]) * ky
+
+    for line in lines:
+        for a, b in zip(line, line[1:]):
+            (x0, y0), (x1, y1) = project(a), project(b)
+            steps = int(max(abs(x1 - x0), abs(y1 - y0)) * 2) + 1
+            for k in range(steps + 1):
+                x, y = int(round(x0 + (x1 - x0) * k / steps)), int(round(y0 + (y1 - y0) * k / steps))
+                if 0 <= x < width and 0 <= y < height:
+                    pixels.add((x, y))
+    _COAST[key] = sorted(pixels)
+    return _COAST[key]
+
+
 def normalise(items, cfg, home, max_age=15):
     """Aircraft as dicts with km, bearing, alt, nearest first."""
     planes = []
@@ -155,8 +205,9 @@ def kind(p):
     return t.upper() if t and len(t) <= 10 else KINDS.get(p.get("category") or "", "")
 
 
-def render_aircraft(cfg, planes, width=64, height=64, mdi=None, night=False, now=None):
-    """Draw one aircraft screen. `cfg` is the screen's `aircraft:` options; `planes` from `normalise`."""
+def render_aircraft(cfg, planes, width=64, height=64, mdi=None, night=False, now=None, home=None, log=print):
+    """Draw one aircraft screen. `cfg` is the screen's `aircraft:` options; `planes` from `normalise`; `home`
+    (lat, lon) is only needed for a radar `coastline`."""
     now = time.time() if now is None else now
     colours = dict(DEFAULT_COLOURS, **{k: v for k, v in cfg.get("colours", {}).items()})
     col = {k: tuple(v) for k, v in colours.items()}
@@ -169,6 +220,9 @@ def render_aircraft(cfg, planes, width=64, height=64, mdi=None, night=False, now
             return c.px
         style = "nearest"
     if style == "radar":
+        if cfg.get("coastline") and home:
+            for x, y in coastline_pixels(cfg["coastline"], home, float(cfg.get("range_km", 100)), width, height, log):
+                c.put(x, y, col["coast"])
         draw_radar(c, cfg, planes, col)
     elif style == "board":
         draw_board(c, cfg, planes, col)
