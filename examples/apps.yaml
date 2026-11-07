@@ -37,3 +37,15 @@ wled_matrix:
           thresholds:
             - {above: 50, colour: [230, 0, 0]}    # importing
           colour: [0, 110, 255]
+
+# Aircraft from your own ADS-B receiver (see README: Aircraft screens). Add `radar` to a matrix's screens.
+#    radar:
+#      aircraft:
+#        style: radar
+#        url: http://192.168.1.20/tar1090/data/aircraft.json
+#        range_km: 100
+#    plane_alert:
+#      priority: true                         # interrupts the rotation ...
+#      show_if: binary_sensor.plane_nearby    # ... while this is on, for at most max_time seconds
+#      max_time: 60
+#      aircraft: {style: alert, url: http://192.168.1.20/tar1090/data/aircraft.json}

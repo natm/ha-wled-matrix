@@ -12,6 +12,9 @@ An [AppDaemon](https://appdaemon.readthedocs.io/) app that shows Home Assistant 
 - Several matrices, each with its own screens and dwell time (a screen can set its own); an optional on/off entity per matrix.
 - **Camera screens:** a Home Assistant camera's still, refreshed every `refresh` seconds while the screen is shown (needs Pillow).
 - Any Home Assistant entity with a numeric state can be shown, and on/off entities (switches, lights, binary sensors) as `on`/`off`.
+- **Aircraft screens:** live aircraft near home from your own ADS-B receiver (readsb / tar1090 `aircraft.json`, or a Home Assistant entity listing them): a **radar**, the **nearest aircraft**, a **departures board**, or a flashing **alert** for low flyers, helicopters and emergencies.
+- **Conditional and priority screens:** show a screen only while an entity is on, or let it interrupt the rotation (e.g. an alert).
+- **Night dimming:** dim every screen (and stop flashing) between two times.
 
 ## Install
 
@@ -147,6 +150,87 @@ A screen with `camera:` shows that camera's current still, scaled to the matrix 
 Camera screens need **Pillow**: on Home Assistant OS, add `Pillow` to the AppDaemon app's `python_packages` option and restart it. The app reaches Home Assistant through the Supervisor (no token needed); elsewhere, set `ha_url` and `ha_token` (a long-lived access token) on the app.
 
 At 64×64 you'll recognise the scene (a car on the drive, someone at the door), not faces.
+
+### Aircraft screens
+
+A screen with `aircraft:` shows the aircraft around a home point, from your own ADS-B receiver, refreshed every `refresh` seconds.
+
+![radar, nearest aircraft and alert screens (made-up aircraft)](docs/aircraft.png)
+
+```yaml
+  screens:
+    planes:
+      aircraft:
+        style: radar                 # radar, nearest, board or alert
+        url: http://192.168.1.20/tar1090/data/aircraft.json   # readsb / tar1090 / dump1090-fa
+        # headers: {Host: adsb.example.lan}                  # optional extra HTTP headers
+        latitude: 51.5007            # home point; default: Home Assistant's zone.home
+        longitude: -0.1246
+        range_km: 100                # radar: distance to the edge of the panel
+```
+
+| Style | What it shows |
+|---|---|
+| `radar` | North up, home a white dot in the middle, rings (default at a quarter, half and all of `range_km`), each aircraft a 2 × 2 dot **coloured by height** with a short heading tick; "interesting" aircraft get a box round them. The count in the top corner, the range at the bottom |
+| `nearest` | The closest aircraft: callsign, type (or a word like `HELICOPTER`) and route if known, distance in big digits with an arrow pointing to it, height and speed. The bottom line shows the next aircraft, one at a time (`page_seconds`, default 3) |
+| `board` | The four nearest, two lines each: callsign and route (or type), then distance, direction and height |
+| `alert` | A full-screen card with a flashing border for the most urgent **interesting** aircraft: the reason (`LOW FLYER`, `HELICOPTER`, `EMERGENCY`, `OVERHEAD`…), an aeroplane or helicopter icon, callsign, height, distance and direction. Shows `nearest` if nothing is interesting |
+
+**Data source** (one of):
+- `url`: an `aircraft.json` from readsb, tar1090 or dump1090-fa (read at most once a second, shared by all matrices). readsb-protobuf's own web page serves protobuf only; put tar1090 in front of it.
+- `entity` (and optionally `attribute`, default `aircraft`): a Home Assistant entity whose attribute is a list of readsb-style items (`hex`, `flight`, `lat`, `lon`, `alt_baro`, `track`, `gs`, `category`, `squawk`), optionally with `interesting` (a reason, or null), `route` (e.g. `LHR>JFK`) and `type` (e.g. `A320`). Use this when another app already reads your receiver and decides what's interesting, so the matrix and your dashboards agree.
+
+**"Interesting"**: an item's own `interesting` value if the source gives one; otherwise these rules (change them with `alert_rules`, or `alert_rules: false` to turn them off): squawk 7500/7600/7700 or a helicopter within `special_km` (50), below `low_ft` (5,000 ft) within `low_km` (20 km), or within `overhead_km` (5 km).
+
+| Option | Default | Meaning |
+|---|---|---|
+| `range_km` | 100 | Radar: distance from home to the edge |
+| `rings_km` | quarter, half, full range | Radar rings |
+| `show_count`, `show_range` | true | Radar: the aircraft count and the range label |
+| `max_age` | 15 | Ignore aircraft whose last position is older than this (seconds) |
+| `page_seconds`, `ticker_count` | 3, 5 | Nearest: how long each other aircraft shows on the bottom line, and how many |
+| `flash` | true | Alert: flash the border once a second (never at night, see below) |
+| `altitude_colours` | orange < 5,000 ft, green < 20,000 ft, cyan < 33,000 ft, blue above | List of `{below: <feet>, colour: [r, g, b]}`, the last without `below` |
+| `colours` | | Override any of `ring`, `house`, `text`, `label`, `accent` (alert and highlights), `ticker`, `ground`, `marker` |
+
+Positions update once a second (the receiver's rate), so dots and numbers move at the frame rate; there's no animation between frames.
+
+### Conditional and priority screens
+
+Any screen can take:
+
+| Key | Meaning |
+|---|---|
+| `show_if` | An entity: the screen is only in the rotation while it's `on` |
+| `priority` | `true`: the screen isn't in the normal rotation; while its `show_if` entity is on it **interrupts** the rotation, for at most `max_time` seconds (default 60), and then only again after the entity has gone off and on |
+| `max_time` | Seconds a priority screen stays up at most |
+
+For example, a radar in the rotation, and an alert that jumps in when something interesting is near:
+
+```yaml
+  matrices:
+    - host: 192.168.1.50
+      screens: [energy, radar, plane_alert]
+  screens:
+    radar:
+      aircraft: {style: radar, entity: sensor.adsb_radar}
+    plane_alert:
+      priority: true
+      show_if: binary_sensor.adsb_interesting
+      max_time: 60
+      aircraft: {style: alert, entity: sensor.adsb_radar}
+```
+
+### Night dimming
+
+```yaml
+wled_matrix:
+  night:
+    start: "22:00"
+    end: "07:00"
+    brightness: 0.25     # every pixel scaled to 25 %; flashing stops
+    # time_zone: Europe/London   # default: Home Assistant's time zone
+```
 
 ## Updating
 
