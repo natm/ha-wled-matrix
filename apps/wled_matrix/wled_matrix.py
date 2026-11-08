@@ -6,7 +6,8 @@ to its normal effect or preset after its realtime timeout (about 2.5 s by defaul
 
 Screens can be conditional (`show_if`: only while an entity is on) or priority (`priority: true`: interrupt the
 rotation while their `show_if` entity is on, for at most `max_time` seconds). An optional `night` window dims every
-screen and stops flashing.
+screen and stops flashing and animation. A screen with `frame_rate` is redrawn that many times a second while it's
+showing (for animation), except at night.
 
 See README.md for the configuration.
 """
@@ -20,6 +21,7 @@ from wm_aircraft import AircraftSource, normalise, render_aircraft
 from wm_camera import CameraSource
 from wm_ddp import DdpSender
 from wm_mdi import MdiIcons
+from wm_power import entities as power_entities, render_power_flow
 from wm_render import items, render_screen
 
 try:
@@ -48,7 +50,13 @@ class WledMatrix(Hass):
                 if name not in self.screens:
                     raise ValueError(f"matrix {m['host']}: unknown screen {name!r}")
         self.tz = self.home_timezone()
+        self.showing = {}  # host -> screen name drawn last
+        self.last_draw = {}  # host -> monotonic time of the last frame sent
         self.run_every(self.tick, "now", self.refresh)
+        rates = [float(s["frame_rate"]) for s in self.screens.values()
+                 if float(s.get("frame_rate", 0)) > 1 / self.refresh]
+        if rates:  # a faster timer, used only while a screen with `frame_rate` is showing
+            self.run_every(self.fast_tick, "now", 1 / max(rates))
         self.log(f"Driving {len(self.matrices)} matrix(es), refresh {self.refresh}s")
 
     def value(self, entity):
@@ -127,30 +135,52 @@ class WledMatrix(Hass):
 
     def tick(self, kwargs):
         night = self.is_night()
-        dim = float(self.night.get("brightness", 0.25)) if night else 1.0
         for m in self.matrices:
-            host = m["host"]
             if not self.enabled(m):
+                self.showing.pop(m["host"], None)
                 continue
             name = self.choose(m)
             if name is None:
+                self.showing.pop(m["host"], None)
                 continue  # nothing to show: WLED falls back to its own effect after its timeout
-            screen = self.screens[name]
-            width, height = m.get("width", 64), m.get("height", 64)
-            if "camera" in screen:
-                pixels = self.cameras.pixels(screen, width, height)
-                if pixels is None:
-                    continue  # nothing to show yet; WLED falls back to its own effect after its timeout
-            elif "aircraft" in screen:
-                cfg = screen["aircraft"]
-                planes, home = self.aircraft_list(cfg)
-                pixels = render_aircraft(cfg, planes, width, height, self.mdi, night=night, home=home, log=self.log)
-            else:
-                values = [self.value(item["entity"]) if "entity" in item else None for item in items(screen)]
-                pixels = render_screen(screen, values, width, height, self.mdi)
-            if dim < 1.0:
-                pixels = [(int(r * dim), int(g * dim), int(b * dim)) for r, g, b in pixels]
-            try:
-                self.sender.send(host, pixels)
-            except OSError as err:
-                self.log(f"{host}: send failed: {err}", level="WARNING")
+            self.showing[m["host"]] = name
+            self.draw(m, name, night)
+
+    def fast_tick(self, kwargs):
+        """Extra frames for a showing screen with `frame_rate` (not at night); the rotation stays on `tick`."""
+        if self.is_night():
+            return
+        now = time.monotonic()
+        for m in self.matrices:
+            name = self.showing.get(m["host"])
+            rate = float(self.screens[name].get("frame_rate", 0)) if name else 0
+            if rate > 0 and now - self.last_draw.get(m["host"], float("-inf")) >= 0.9 / rate:
+                self.draw(m, name, False)
+
+    def draw(self, m, name, night):
+        """Draw screen `name` on matrix `m` and send it."""
+        host, screen = m["host"], self.screens[name]
+        width, height = m.get("width", 64), m.get("height", 64)
+        if "camera" in screen:
+            pixels = self.cameras.pixels(screen, width, height)
+            if pixels is None:
+                return  # nothing to show yet; WLED falls back to its own effect after its timeout
+        elif "aircraft" in screen:
+            cfg = screen["aircraft"]
+            planes, home = self.aircraft_list(cfg)
+            pixels = render_aircraft(cfg, planes, width, height, self.mdi, night=night, home=home, log=self.log)
+        elif "power_flow" in screen:
+            cfg = screen["power_flow"]
+            states = {entity: self.get_state(entity) for _, entity in power_entities(cfg)}
+            pixels = render_power_flow(cfg, states, width, height, self.mdi, t=time.monotonic(), night=night)
+        else:
+            values = [self.value(item["entity"]) if "entity" in item else None for item in items(screen)]
+            pixels = render_screen(screen, values, width, height, self.mdi)
+        dim = float(self.night.get("brightness", 0.25)) if night else 1.0
+        if dim < 1.0:
+            pixels = [(int(r * dim), int(g * dim), int(b * dim)) for r, g, b in pixels]
+        self.last_draw[host] = time.monotonic()
+        try:
+            self.sender.send(host, pixels)
+        except OSError as err:
+            self.log(f"{host}: send failed: {err}", level="WARNING")

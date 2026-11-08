@@ -13,8 +13,10 @@ An [AppDaemon](https://appdaemon.readthedocs.io/) app that shows Home Assistant 
 - **Camera screens:** a Home Assistant camera's still, refreshed every `refresh` seconds while the screen is shown (needs Pillow).
 - Any Home Assistant entity with a numeric state can be shown, and on/off entities (switches, lights, binary sensors) as `on`/`off`.
 - **Aircraft screens:** live aircraft near home from your own ADS-B receiver (readsb / tar1090 `aircraft.json`, or a Home Assistant entity listing them): a **radar**, the **nearest aircraft**, a **departures board**, or a flashing **alert** for low flyers, helicopters and emergencies.
+- **Power-flow screen:** solar, grid, battery, car and house joined by lines, with dots moving the way the power flows, faster with more power (Victron or any other system with power sensors).
 - **Conditional and priority screens:** show a screen only while an entity is on, or let it interrupt the rotation (e.g. an alert).
-- **Night dimming:** dim every screen (and stop flashing) between two times.
+- **Animation:** a screen can set its own `frame_rate`, redrawn faster only while it's showing.
+- **Night dimming:** dim every screen (and stop flashing and animation) between two times.
 
 ## Install
 
@@ -168,12 +170,13 @@ A screen with `aircraft:` shows the aircraft around a home point, from your own 
         latitude: 51.5007            # home point; default: Home Assistant's zone.home
         longitude: -0.1246
         range_km: 100                # radar: distance to the edge of the panel
+        # marker: arrow              # radar: arrow (default), line or tick; arrows turn to lines above line_above (12)
         # coastline: /config/coastline.geojson   # radar: coast outline to scale (see below)
 ```
 
 | Style | What it shows |
 |---|---|
-| `radar` | North up, home a white dot in the middle, rings (default at a quarter, half and all of `range_km`), each aircraft a 2 × 2 dot **coloured by height** with a short heading tick; "interesting" aircraft get a box round them. The count in the top corner, the range at the bottom |
+| `radar` | North up, home a white dot in the middle, rings (default at a quarter, half and all of `range_km`), each aircraft a small arrow **coloured by height** pointing the way it's flying (see `marker`); "interesting" aircraft get a box round them. The count in the top corner, the range at the bottom |
 | `nearest` | The closest aircraft: callsign, type (or a word like `HELICOPTER`) and route if known, distance in big digits with an arrow pointing to it, height and speed. The bottom line shows the next aircraft, one at a time (`page_seconds`, default 3) |
 | `board` | The four nearest, two lines each: callsign and route (or type), then distance, direction and height |
 | `alert` | A full-screen card with a flashing border for the most urgent **interesting** aircraft: the reason (`LOW FLYER`, `HELICOPTER`, `EMERGENCY`, `OVERHEAD`…), an aeroplane or helicopter icon, callsign, height, distance and direction. Shows `nearest` if nothing is interesting |
@@ -189,6 +192,8 @@ A screen with `aircraft:` shows the aircraft around a home point, from your own 
 | `range_km` | 100 | Radar: distance from home to the edge |
 | `rings_km` | quarter, half, full range | Radar rings |
 | `coastline` | none | Radar: a GeoJSON file of coastlines (or any lines: LineString, MultiLineString, Polygon outlines, lon/lat) drawn to scale round home, so you can see where the aircraft are. E.g. clip [Natural Earth](https://www.naturalearthdata.com/)'s public-domain 1:10m coastline to your area; the file is read once |
+| `marker` | `arrow` | Radar: how each aircraft is drawn. `arrow`: a 5 × 5 arrowhead (bright head, dimmer shaft) snapped to the nearest of 8 headings. `line`: 5 pixels along the exact track, white nose, full-colour body and a fading tail; smaller, so better in a busy sky. `tick`: the old 2 × 2 dot with two dim pixels ahead. Aircraft with no track are a 2 × 2 dot |
+| `line_above` | 12 | Radar: with `marker: arrow`, switch to `line` while more than this many aircraft are on the radar, so a crowded sky stays readable. `0` turns this off |
 | `show_count`, `show_range` | true | Radar: the aircraft count and the range label |
 | `max_age` | 15 | Ignore aircraft whose last position is older than this (seconds) |
 | `page_seconds`, `ticker_count` | 3, 5 | Nearest: how long each other aircraft shows on the bottom line, and how many |
@@ -196,7 +201,51 @@ A screen with `aircraft:` shows the aircraft around a home point, from your own 
 | `altitude_colours` | orange < 5,000 ft, green < 20,000 ft, cyan < 33,000 ft, blue above | List of `{below: <feet>, colour: [r, g, b]}`, the last without `below` |
 | `colours` | | Override any of `ring`, `house`, `text`, `label`, `accent` (alert and highlights), `ticker`, `ground`, `marker`, `coast` |
 
+The box round an "interesting" aircraft is 7 × 7, drawn before the aircraft itself, so the arrow or line is never hidden under it.
+
+Tests: `python3 -m unittest discover tests` (plain Python, no Home Assistant needed).
+
 Positions update once a second (the receiver's rate), so dots and numbers move at the frame rate; there's no animation between frames.
+
+### Power-flow screen
+
+A screen with `power_flow:` shows where the power is going right now: the sun and solar power top left, the grid top right, the battery (filled and coloured by charge) bottom left, the car bottom right, and the house in the middle. Bright dots move along each line in the direction of flow, faster with more power. Numbers are kW with one decimal.
+
+![power flow: sunny with the car charging; evening on the battery; cheap-rate night charging the battery and car from the grid](docs/power-flow.png)
+
+```yaml
+  screens:
+    power_flow:
+      frame_rate: 5                 # redraw 5 times a second while showing, so the dots move smoothly (see below)
+      power_flow:
+        solar: [sensor.pv_dc_power, sensor.pv_ac_power]   # one entity or a list, added up
+        grid: sensor.grid_power     # W, + = importing, - = exporting
+        battery: sensor.battery_power        # W, + = charging, - = discharging
+        soc: sensor.battery_state_of_charge  # %
+        load: sensor.house_load_power        # W
+        ev: sensor.ev_charger_power          # W
+        load_includes_ev: true      # the load sensor already counts the car: show the house as load - car
+        max_kw: 10                  # dots reach full speed at this power
+```
+
+| Part | Colours |
+|---|---|
+| Grid | red while importing, green while exporting, grey when idle |
+| Battery line | blue, dots towards the house when discharging and towards the battery when charging; the edge of the fill pulses |
+| Car line | the colour of the biggest supply at the moment (solar yellow, grid red or battery blue) |
+| Battery fill and % | `soc_thresholds` (default green from 30 %, orange from 20 %), else `soc_colour` (red) |
+| Anything under `idle_w` | grey, with a still, dark line |
+
+| Option | Default | Meaning |
+|---|---|---|
+| `solar`, `grid`, `battery`, `soc`, `load`, `ev` | | Entities (W, and % for `soc`); any can be left out. Unknown states show `-` |
+| `load_includes_ev` | false | Subtract the car from the load for the house figure (on Victron systems with the chargers on the inverter's AC output, `AC consumption` includes them) |
+| `max_kw` | 10 | Power at which the dots reach full speed (4 to 16 pixels a second) |
+| `idle_w` | 50 | Below this a flow counts as idle and shows `0` |
+| `soc_thresholds`, `soc_colour` | see above | `[{above: <percent>, colour: [r, g, b]}, …]` and the colour under all of them |
+| `colours` | | Override any of `solar`, `import`, `export`, `battery`, `ev`, `house`, `idle`, `line`, `moon`, `outline` |
+
+**`frame_rate`** (any screen): frames per second while that screen is showing, on a separate faster timer; the rotation and every other screen keep to `refresh`. Without it the dots still move, but only once every `refresh`. During the `night` window it's ignored and the dots stand still. Each frame is a few milliseconds of pure Python, and DDP is one small UDP burst, so 5 frames a second on several matrices is light work.
 
 ### Conditional and priority screens
 
@@ -231,7 +280,7 @@ wled_matrix:
   night:
     start: "22:00"
     end: "07:00"
-    brightness: 0.25     # every pixel scaled to 25 %; flashing stops
+    brightness: 0.25     # every pixel scaled to 25 %; flashing and animation stop
     # time_zone: Europe/London   # default: Home Assistant's time zone
 ```
 

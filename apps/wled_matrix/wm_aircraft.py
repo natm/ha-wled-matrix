@@ -1,6 +1,6 @@
 """Aircraft screens: live aircraft near home on the matrix, from your own ADS-B receiver.
 
-Styles: `radar` (north up, home in the middle, a dot per aircraft coloured by height), `nearest` (the closest aircraft:
+Styles: `radar` (north up, home in the middle, an arrow per aircraft coloured by height), `nearest` (the closest aircraft:
 callsign, type, distance, direction, height and speed, with the others paging along the bottom), `board` (the four
 nearest, two lines each) and `alert` (a flashing card for an "interesting" aircraft: low flyer, helicopter, military,
 emergency squawk or overhead).
@@ -237,6 +237,65 @@ def icon(c, mdi, name, x, y, size, colour):
         draw_mdi(c, coverage, x, y, colour)
 
 
+# 5 x 5 arrowheads for north and north-east (H: head, full colour; S: shaft, dimmer); the other six headings are
+# these turned by 90 degree steps. Centred on the aircraft's position.
+ARROW_N = ["..H..", ".HHH.", "H.S.H", "..S..", "..S.."]
+ARROW_NE = ["..HHH", "...HH", "..S.H", ".S...", "S...."]
+SHAFT = 0.45
+MARKERS = ("arrow", "line", "tick")
+
+
+def arrow_sprite(track):
+    """{(dx, dy): brightness} for a 5 x 5 arrowhead pointing along `track` (degrees), snapped to 8 headings."""
+    k = int(round(track / 45.0)) % 8
+    out = {}
+    for y, row in enumerate(ARROW_N if k % 2 == 0 else ARROW_NE):
+        for x, ch in enumerate(row):
+            if ch != ".":
+                dx, dy = x - 2, y - 2
+                for _ in range(k // 2):  # turn 90 degrees clockwise (screen y points down)
+                    dx, dy = -dy, dx
+                out[(dx, dy)] = 1.0 if ch == "H" else SHAFT
+    return out
+
+
+def radar_marker(cfg, count):
+    """Marker style for this frame: `marker` (arrow, line or tick), or `line` once more than `line_above` aircraft
+    are on the radar (0 or null turns the fallback off)."""
+    marker = cfg.get("marker", "arrow")
+    if marker not in MARKERS:
+        marker = "arrow"
+    above = cfg.get("line_above", 12)
+    if marker == "arrow" and above and count > above:
+        marker = "line"
+    return marker
+
+
+def draw_marker(c, marker, track, x, y, colour):
+    """One aircraft at (x, y). `arrow`: 5 x 5 arrowhead on 8 headings; `line`: 5 pixels along the track, white
+    nose, full-colour body, fading tail; `tick`: 2 x 2 dot with 2 dim pixels ahead. No track: a 2 x 2 dot."""
+    if track is None or marker == "tick":
+        if track is not None:
+            t = math.radians(track)
+            for s in (2, 3):
+                c.put(int(round(x + 0.5 + s * math.sin(t))), int(round(y + 0.5 - s * math.cos(t))),
+                      tuple(v // 2 for v in colour))
+        for dx in (0, 1):
+            for dy in (0, 1):
+                c.put(x + dx, y + dy, colour)
+    elif marker == "line":
+        t = math.radians(track)
+        sx, sy = math.sin(t), -math.cos(t)
+        nose = tuple(int(v + (255 - v) * 0.8) for v in colour)
+        for s, f in ((-3, 0.12), (-2, 0.3), (-1, 0.6), (0, 1.0)):
+            c.put(int(math.floor(x + 0.5 + s * sx)), int(math.floor(y + 0.5 + s * sy)),
+                  tuple(int(v * f) for v in colour))
+        c.put(int(math.floor(x + 0.5 + sx)), int(math.floor(y + 0.5 + sy)), nose)
+    else:
+        for (dx, dy), f in arrow_sprite(track).items():
+            c.put(x + dx, y + dy, tuple(int(v * f) for v in colour))
+
+
 def draw_radar(c, cfg, planes, col):
     w, h = c.w, c.h
     cx, cy = w // 2, h // 2
@@ -250,23 +309,17 @@ def draw_radar(c, cfg, planes, col):
             t = 2 * math.pi * k / steps
             c.put(int(round(cx + r * math.sin(t))), int(round(cy - r * math.cos(t))), col["ring"])
     shown = [p for p in planes if p["km"] <= range_km]
+    marker = radar_marker(cfg, len(shown))
     for p in reversed(shown):  # nearest drawn last, on top
         rr = p["km"] * scale
         x = int(round(cx + rr * math.sin(math.radians(p["bearing"]))))
         y = int(round(cy - rr * math.cos(math.radians(p["bearing"]))))
         colour = band_colour(p["alt"], cfg)
-        if p["track"] is not None:  # heading tick: 2 dim pixels ahead of the dot
-            t = math.radians(p["track"])
-            for s in (2, 3):
-                c.put(int(round(x + 0.5 + s * math.sin(t))), int(round(y + 0.5 - s * math.cos(t))),
-                      tuple(v // 2 for v in colour))
-        if p["reason"]:  # interesting: a box round it
-            for k in range(-2, 4):
-                for dx, dy in ((k, -2), (k, 3), (-2, k), (3, k)):
+        if p["reason"]:  # interesting: a box round it, drawn first so the marker is never hidden under it
+            for k in range(-3, 4):
+                for dx, dy in ((k, -3), (k, 3), (-3, k), (3, k)):
                     c.put(x + dx, y + dy, col["marker"])
-        for dx in (0, 1):
-            for dy in (0, 1):
-                c.put(x + dx, y + dy, colour)
+        draw_marker(c, marker, p["track"], x, y, colour)
     c.put(cx, cy, col["house"])
     for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
         c.put(cx + dx, cy + dy, tuple(v // 3 for v in col["house"]))
