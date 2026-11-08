@@ -85,3 +85,10 @@ class Drawing(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Web(unittest.TestCase):
+    def test_frame_bytes(self):
+        import wm_web
+        self.assertEqual(wm_web.frame_bytes([(1, 2, 3), (4, 5, 6)]), bytes([1, 2, 3, 4, 5, 6]))
+        self.assertIn("/matrix_frame", wm_web.PAGE)

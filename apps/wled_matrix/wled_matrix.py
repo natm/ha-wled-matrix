@@ -11,6 +11,9 @@ it's showing (for animation), except at night.
 
 Network screens show internet speed and the line in use (`style: big`), or a failover alert (`style: alert`).
 
+With `web: true`, AppDaemon's web server also serves a live view of the matrices at `/app/matrix`: a mirror of the
+frames being sent, or a preview of any screen drawn on demand.
+
 Weather screens read a weather entity's daily forecast with the `weather.get_forecasts` action every
 `forecast_interval` seconds (a local Home Assistant call); tide screens read a list of high and low waters from an
 entity's attribute.
@@ -18,6 +21,7 @@ entity's attribute.
 See README.md for the configuration.
 """
 
+import asyncio
 import datetime
 import time
 
@@ -31,6 +35,7 @@ from wm_network import entities as network_entities, render_network
 from wm_power import entities as power_entities, render_power_flow
 from wm_render import items, render_screen
 from wm_tides import parse_events, render_tides
+from wm_web import PAGE, frame_bytes
 from wm_weather import animation_phase, render_weather
 
 try:
@@ -63,6 +68,12 @@ class WledMatrix(Hass):
         self.forecasts = {}  # weather entity -> (monotonic time fetched, daily forecast list or None)
         self.frames = {}  # (screen, size) -> (key, pixels): a weather frame only changes with its phase and data
         self.last_draw = {}  # host -> monotonic time of the last frame sent
+        self.mirror = {}  # host -> (monotonic time sent, screen name, pixels): the web page's mirror view
+        if self.args.get("web"):  # a live view at http://<appdaemon>:5050/app/matrix (AppDaemon's web server)
+            self.register_route(self.web_page, "matrix")
+            self.register_route(self.web_info, "matrix_info")
+            self.register_route(self.web_frame, "matrix_frame")
+            self.log("Live view: /app/matrix on AppDaemon's web server")
         self.run_every(self.tick, "now", self.refresh)
         rates = [float(s["frame_rate"]) for s in self.screens.values()
                  if float(s.get("frame_rate", 0)) > 1 / self.refresh]
@@ -192,12 +203,24 @@ class WledMatrix(Hass):
 
     def draw(self, m, name, night):
         """Draw screen `name` on matrix `m` and send it."""
-        host, screen = m["host"], self.screens[name]
-        width, height = m.get("width", 64), m.get("height", 64)
+        host = m["host"]
+        pixels = self.render(name, m.get("width", 64), m.get("height", 64), night)
+        if pixels is None:
+            return  # nothing to show yet; WLED falls back to its own effect after its timeout
+        self.last_draw[host] = time.monotonic()
+        self.mirror[host] = (time.monotonic(), name, pixels)  # for the web page's mirror view
+        try:
+            self.sender.send(host, pixels)
+        except OSError as err:
+            self.log(f"{host}: send failed: {err}", level="WARNING")
+
+    def render(self, name, width, height, night):
+        """Pixels for screen `name` (dimmed at night), or None when there's nothing to show yet (a camera)."""
+        screen = self.screens[name]
         if "camera" in screen:
             pixels = self.cameras.pixels(screen, width, height)
             if pixels is None:
-                return  # nothing to show yet; WLED falls back to its own effect after its timeout
+                return None
         elif "aircraft" in screen:
             cfg = screen["aircraft"]
             planes, home = self.aircraft_list(cfg)
@@ -233,14 +256,59 @@ class WledMatrix(Hass):
         else:
             values = [self.value(item["entity"]) if "entity" in item else None for item in items(screen)]
             pixels = render_screen(screen, values, width, height, self.mdi)
-        dim = float(self.night.get("brightness", 0.25)) if night else 1.0
+        dim = float((self.night or {}).get("brightness", 0.25)) if night else 1.0
         if dim < 1.0:
             pixels = [(int(r * dim), int(g * dim), int(b * dim)) for r, g, b in pixels]
-        self.last_draw[host] = time.monotonic()
+        return pixels
+
+    # ---------- web page (optional: `web: true`) ----------
+    async def web_page(self, request, kwargs):
+        from aiohttp import web  # AppDaemon ships aiohttp; imported here so tests run without it
+        return web.Response(text=PAGE, content_type="text/html")
+
+    async def web_info(self, request, kwargs):
+        from aiohttp import web  # AppDaemon ships aiohttp; imported here so tests run without it
+        now = time.monotonic()
+        matrices = []
+        for i, m in enumerate(self.matrices):
+            shown = self.mirror.get(m["host"])
+            matrices.append({"id": i, "name": m.get("name", m["host"]), "host": m["host"],
+                             "width": m.get("width", 64), "height": m.get("height", 64),
+                             "showing": shown[1] if shown else None,
+                             "age": round(now - shown[0], 1) if shown else None})
+        return web.json_response({"matrices": matrices, "screens": sorted(self.screens)})
+
+    async def web_frame(self, request, kwargs):
+        """Raw RGB bytes, row by row. ?mode=mirror&m=<index>: the last frame sent to that matrix.
+        ?mode=preview&screen=<name>&night=0|1&w=64&h=64: that screen drawn now from live states."""
+        from aiohttp import web  # AppDaemon ships aiohttp; imported here so tests run without it
+        q = request.query
+        if q.get("mode") == "preview":
+            name = q.get("screen")
+            if name not in self.screens:
+                return web.Response(status=404, text="unknown screen")
+            w, h = int(q.get("w", 64)), int(q.get("h", 64))
+            night = q.get("night") == "1"
+            loop = asyncio.get_running_loop()
+            pixels = await loop.run_in_executor(None, self.render, name, w, h, night)
+            if pixels is None:
+                pixels = [(0, 0, 0)] * (w * h)
+            return web.Response(body=frame_bytes(pixels), content_type="application/octet-stream",
+                                headers={"X-Screen": name, "X-Width": str(w), "X-Height": str(h),
+                                         "Cache-Control": "no-store"})
         try:
-            self.sender.send(host, pixels)
-        except OSError as err:
-            self.log(f"{host}: send failed: {err}", level="WARNING")
+            m = self.matrices[int(q.get("m", 0))]
+        except (ValueError, IndexError):
+            return web.Response(status=404, text="unknown matrix")
+        w, h = m.get("width", 64), m.get("height", 64)
+        shown = self.mirror.get(m["host"])
+        if not shown:
+            return web.Response(status=204, headers={"Cache-Control": "no-store"})
+        sent, name, pixels = shown
+        return web.Response(body=frame_bytes(pixels), content_type="application/octet-stream",
+                            headers={"X-Screen": name, "X-Width": str(w), "X-Height": str(h),
+                                     "X-Age-Ms": str(int((time.monotonic() - sent) * 1000)),
+                                     "Cache-Control": "no-store"})
 
 
 def find_forecast(result, entity):

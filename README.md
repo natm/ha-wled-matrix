@@ -18,6 +18,8 @@ An [AppDaemon](https://appdaemon.readthedocs.io/) app that shows Home Assistant 
 - **Tide screen:** the next high and low waters as a table, or today's tide curve, from any entity listing them (e.g. the UKHO Tides integration for UK ports).
 - **Conditional and priority screens:** show a screen only while an entity is on, or let it interrupt the rotation (e.g. an alert).
 - **Animation:** a screen can set its own `frame_rate`, redrawn faster only while it's showing.
+- **Live view in a browser:** mirror what a matrix shows, or preview any screen at up to 30 frames a second, from AppDaemon's web server.
+- **Network screen:** internet speed in big digits with the line in use and latency, and a failover alert.
 - **Night dimming:** dim every screen (and stop flashing and fast animation) between two times.
 
 ## Install
@@ -367,6 +369,21 @@ For example, a radar in the rotation, and an alert that jumps in when something 
       max_time: 60
       aircraft: {style: alert, entity: sensor.adsb_radar}
 ```
+
+### Live view in a browser
+
+Set `web: true` and the app adds a page to AppDaemon's own web server: `http://<appdaemon host>:5050/app/matrix`.
+
+- **Mirror:** pick a matrix and see exactly the frames being sent to it (about 1 a second, or the screen's
+  `frame_rate`), with the screen name and how long ago the frame was sent.
+- **Preview:** pick any screen, even one not in a rotation, and it's drawn on demand from live Home Assistant states,
+  at 5 to 30 frames a second, by day or (tick Night) dimmed as at night. Handy for designing screens away from the
+  panels.
+- LED-dot or square look; the page remembers your choices.
+
+Give each matrix a `name:` (e.g. `Kitchen`) to show it in the list instead of its address. There's no login:
+AppDaemon's web server is local, and the page only reads. `/app/matrix_info` (JSON) and `/app/matrix_frame` (raw RGB
+bytes) are what the page uses.
 
 ### Night dimming
 
