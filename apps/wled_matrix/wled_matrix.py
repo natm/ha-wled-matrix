@@ -9,6 +9,8 @@ rotation while their `show_if` entity is on, for at most `max_time` seconds). An
 screen and stops flashing and fast animation. A screen with `frame_rate` is redrawn that many times a second while
 it's showing (for animation), except at night.
 
+Stars screens show weekly star points for children (`style: week`), or a pop-up when a star changes (`style: alert`).
+
 Network screens show internet speed and the line in use (`style: big`), or a failover alert (`style: alert`).
 
 With `web: true`, AppDaemon's web server also serves a live view of the matrices at `/app/matrix`: a mirror of the
@@ -32,6 +34,7 @@ from wm_camera import CameraSource
 from wm_ddp import DdpSender
 from wm_mdi import MdiIcons
 from wm_network import entities as network_entities, render_network
+from wm_stars import entities as stars_entities, render_stars
 from wm_power import entities as power_entities, render_power_flow
 from wm_render import items, render_screen
 from wm_tides import parse_events, render_tides
@@ -233,6 +236,10 @@ class WledMatrix(Hass):
             cfg = screen["network"]
             states = {entity: self.get_state(entity) for entity in network_entities(cfg)}
             pixels = render_network(cfg, states, width, height, self.mdi, t=time.monotonic(), night=night)
+        elif "stars" in screen:
+            cfg = screen["stars"]
+            states = {entity: self.get_state(entity) for entity in stars_entities(cfg)}
+            pixels = render_stars(cfg, states, width, height, self.mdi, t=time.monotonic(), night=night)
         elif "weather" in screen:
             cfg = screen["weather"]
             attrs = self.get_state(cfg["weather"], attribute="all") or {}

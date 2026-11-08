@@ -19,6 +19,7 @@ An [AppDaemon](https://appdaemon.readthedocs.io/) app that shows Home Assistant 
 - **Conditional and priority screens:** show a screen only while an entity is on, or let it interrupt the rotation (e.g. an alert).
 - **Animation:** a screen can set its own `frame_rate`, redrawn faster only while it's showing.
 - **Live view in a browser:** mirror what a matrix shows, or preview any screen at up to 30 frames a second, from AppDaemon's web server.
+- **Stars screen:** weekly star points for children, with a WELL DONE pop-up when a star is earned.
 - **Network screen:** internet speed in big digits with the line in use and latency, and a failover alert.
 - **Night dimming:** dim every screen (and stop flashing and fast animation) between two times.
 
@@ -343,6 +344,32 @@ internet_alert:                   # shows only during a failover, for up to 60 s
 blue digits, upload in orange, and a bar showing how full the main line is. On the backup line the name turns amber
 and "FTTP DOWN" flashes along the bottom. `alert`: a red flashing border, "FTTP DOWN", "ON STARLINK" and the backup's
 speeds. Without `backup_active`, the backup counts as in use whenever the main line has no data.
+
+### Stars screen
+
+Weekly star points for children: each child's stars this week (gold when earned, dim when not) and a yearly total,
+plus a pop-up when a star is added or taken away. Keep the counts in Home Assistant counters (e.g. a weekly counter
+with maximum 7 and a yearly one), and set the `alert` text (`child,+` or `child,-`) and an on/off helper from the
+script that changes them.
+
+```yaml
+stars:
+  stars:
+    style: week
+    most: 7                       # stars per week
+    kids:
+      - {id: seth, name: Seth, colour: [0, 170, 255], week: counter.seth_stars_week, year: counter.seth_stars_year}
+      - {id: dylan, name: Dylan, colour: [0, 220, 90], week: counter.dylan_stars_week, year: counter.dylan_stars_year}
+stars_alert:
+  priority: true
+  show_if: input_boolean.stars_alert_showing
+  max_time: 20
+  frame_rate: 3                   # twinkles (still at night)
+  stars: {style: alert, alert: input_text.stars_alert, kids: [...same as above...]}
+```
+
+A `+` shows a shooting star, WELL DONE and the name (a trophy and "7 STARS!" when the week is full); a `-` shows a
+calm grey STAR OFF.
 
 ### Conditional and priority screens
 
