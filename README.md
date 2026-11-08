@@ -379,7 +379,7 @@ Any screen can take:
 | Key | Meaning |
 |---|---|
 | `show_if` | An entity: the screen is only in the rotation while it's `on` |
-| `priority` | `true`: the screen isn't in the normal rotation; while its `show_if` entity is on it **interrupts** the rotation, for at most `max_time` seconds (default 60), and then only again after the entity has gone off and on |
+| `priority` | `true`: the screen isn't in the normal rotation; while its `show_if` entity is on it **interrupts** the rotation, for at most `max_time` seconds (default 60), and then only again after the entity has gone off and on, or a `restart_on` entity changes. When several are on, the first in the matrix's `screens` list wins |
 | `max_time` | Seconds a priority screen stays up at most |
 
 For example, a radar in the rotation, and an alert that jumps in when something interesting is near:
