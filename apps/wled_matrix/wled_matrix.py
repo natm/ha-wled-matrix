@@ -5,7 +5,8 @@ latest entity states and sent to the matrix over DDP, so WLED shows it as live d
 to its normal effect or preset after its realtime timeout (about 2.5 s by default).
 
 Screens can be conditional (`show_if`: only while an entity is on) or priority (`priority: true`: interrupt the
-rotation while their `show_if` entity is on, for at most `max_time` seconds). An optional `night` window dims every
+rotation while their `show_if` entity is on, for at most `max_time` seconds; `restart_on` entities restart that time
+when they change). An optional `night` window dims every
 screen and stops flashing and fast animation. A screen with `frame_rate` is redrawn that many times a second while
 it's showing (for animation), except at night.
 
@@ -62,6 +63,7 @@ class WledMatrix(Hass):
         self.position = {m["host"]: 0 for m in self.matrices}
         self.elapsed = {m["host"]: 0.0 for m in self.matrices}
         self.interrupt = {}  # (host, screen) -> time the priority screen came up
+        self.restart_sig = {}  # (host, screen) -> states of its `restart_on` entities when last checked
         for m in self.matrices:
             for name in m["screens"]:
                 if name not in self.screens:
@@ -131,10 +133,19 @@ class WledMatrix(Hass):
             key = (host, name)
             if self.shown(screen) and "show_if" in screen:
                 start = self.interrupt.setdefault(key, now)
+                # `restart_on`: a change to any of these entities while the screen is on starts it again (e.g. a
+                # second star pressed while the first pop-up is still up and its show_if entity never went off).
+                watch = screen.get("restart_on") or []
+                if watch:
+                    sig = tuple(self.get_state(e) for e in ([watch] if isinstance(watch, str) else watch))
+                    if self.restart_sig.get(key, sig) != sig:
+                        start = self.interrupt[key] = now
+                    self.restart_sig[key] = sig
                 if now - start < float(screen.get("max_time", 60)):
                     return name
             else:
                 self.interrupt.pop(key, None)  # off again: it may interrupt next time it comes on
+                self.restart_sig.pop(key, None)
         rotation = [i for i, n in enumerate(names) if not self.screens[n].get("priority") and self.shown(self.screens[n])]
         if not rotation:
             return None

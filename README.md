@@ -364,6 +364,7 @@ stars_alert:
   priority: true
   show_if: input_boolean.stars_alert_showing
   max_time: 20
+  restart_on: [input_text.stars_alert, counter.seth_stars_week, counter.dylan_stars_week]   # each press shows it again
   frame_rate: 3                   # twinkles (still at night)
   stars: {style: alert, alert: input_text.stars_alert, kids: [...same as above...]}
 ```

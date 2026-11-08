@@ -55,3 +55,56 @@ class Stars(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RestartOn(unittest.TestCase):
+    """A priority screen comes back for a fresh max_time when a `restart_on` entity changes, even though its show_if
+    entity stayed on (the bug on 2026-11-08: presses after the first 20 s never showed)."""
+
+    @classmethod
+    def setUpClass(cls):
+        import types
+        hassapi = types.ModuleType("appdaemon.plugins.hass.hassapi")
+        hassapi.Hass = object
+        for name in ("appdaemon", "appdaemon.plugins", "appdaemon.plugins.hass"):
+            sys.modules.setdefault(name, types.ModuleType(name))
+        sys.modules["appdaemon.plugins.hass.hassapi"] = hassapi
+        import wled_matrix
+        cls.mod = wled_matrix
+
+    def app(self, restart_on):
+        app = self.mod.WledMatrix()
+        app.screens = {"week": {"rows": []},
+                       "pop": {"priority": True, "show_if": "input_boolean.on", "max_time": 20,
+                               **({"restart_on": restart_on} if restart_on else {})}}
+        app.matrices = [{"host": "a", "screens": ["week", "pop"]}]
+        app.refresh = 1.0
+        app.position, app.elapsed, app.interrupt, app.restart_sig = {"a": 0}, {"a": 0.0}, {}, {}
+        app.states = {"input_boolean.on": "on", "counter.w": "1"}
+        app.get_state = lambda e, **kw: app.states.get(e)
+        return app
+
+    def run_at(self, app, t):
+        self.mod.time.monotonic = lambda: t
+        return app.choose(app.matrices[0])
+
+    def setUp(self):
+        self.real = self.mod.time.monotonic
+
+    def tearDown(self):
+        self.mod.time.monotonic = self.real
+
+    def test_without_restart_on_a_later_press_is_missed(self):
+        app = self.app(None)
+        self.assertEqual(self.run_at(app, 100), "pop")
+        app.states["counter.w"] = "2"
+        self.assertEqual(self.run_at(app, 125), "week")
+
+    def test_restart_on_brings_it_back(self):
+        app = self.app(["counter.w"])
+        self.assertEqual(self.run_at(app, 100), "pop")
+        self.assertEqual(self.run_at(app, 121), "week")      # first 20 s over
+        app.states["counter.w"] = "2"                         # another press, boolean still on
+        self.assertEqual(self.run_at(app, 125), "pop")
+        self.assertEqual(self.run_at(app, 144), "pop")        # a fresh 20 s from 125
+        self.assertEqual(self.run_at(app, 146), "week")
