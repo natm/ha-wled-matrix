@@ -49,3 +49,11 @@ wled_matrix:
 #      show_if: binary_sensor.plane_nearby    # ... while this is on, for at most max_time seconds
 #      max_time: 60
 #      aircraft: {style: alert, url: http://192.168.1.20/tar1090/data/aircraft.json}
+
+# Weather and tides (see README: Weather screen, Tide screen). Add `weather` and `tides` to a matrix's screens.
+#    weather:
+#      frame_rate: 4
+#      dwell: 15
+#      weather: {weather: weather.home, wind_unit: mph}
+#    tides:
+#      tides: {tides: sensor.solva_tide, attribute: predictions, label: NEWGALE, layout: list}

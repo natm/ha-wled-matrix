@@ -14,6 +14,8 @@ An [AppDaemon](https://appdaemon.readthedocs.io/) app that shows Home Assistant 
 - Any Home Assistant entity with a numeric state can be shown, and on/off entities (switches, lights, binary sensors) as `on`/`off`.
 - **Aircraft screens:** live aircraft near home from your own ADS-B receiver (readsb / tar1090 `aircraft.json`, or a Home Assistant entity listing them): a **radar**, the **nearest aircraft**, a **departures board**, or a flashing **alert** for low flyers, helicopters and emergencies.
 - **Power-flow screen:** solar, grid, battery, car and house joined by lines, with small comets moving the way the power flows, faster with more power (Victron or any other system with power sensors).
+- **Weather screen:** today and tomorrow side by side from any Home Assistant weather entity: animated icons, the high and low coloured by temperature, rain and wind with an arrow.
+- **Tide screen:** the next high and low waters as a table, or today's tide curve, from any entity listing them (e.g. the UKHO Tides integration for UK ports).
 - **Conditional and priority screens:** show a screen only while an entity is on, or let it interrupt the rotation (e.g. an alert).
 - **Animation:** a screen can set its own `frame_rate`, redrawn faster only while it's showing.
 - **Night dimming:** dim every screen (and stop flashing and fast animation) between two times.
@@ -248,6 +250,63 @@ A screen with `power_flow:` shows where the power is going right now: the sun an
 | `colours` | | Override any of `solar`, `import`, `export`, `battery`, `ev`, `house`, `idle`, `line`, `moon`, `outline` |
 
 **`frame_rate`** (any screen): frames per second while that screen is showing, on a separate faster timer; the rotation and every other screen keep to `refresh`. Without it the comets still move, but only once every `refresh`. During the `night` window it's ignored: the screen is drawn once every `refresh` and the power-flow comets creep along at `night_speed`. Each frame is a few milliseconds of pure Python, and DDP is one small UDP burst, so 5 frames a second on several matrices is light work.
+
+### Weather screen
+
+A screen with `weather:` shows today and tomorrow side by side: the day (today underlined), an animated icon (sun rays twinkle, rain falls, mist drifts), the high in big digits and the low, coloured on a Met Office-like scale (purple below −5 °C, blue at 0, teal at 5, green at 10, yellow at 15, orange at 20, red from 25), then the rain and the wind with an arrow pointing the way it blows. Rain and wind units are printed once, between the two days.
+
+![weather: Sunday fog 9° low 3°, Monday partly cloudy 10° low 4°, no rain, wind 14 and 22 mph from the south-east](docs/weather.png)
+
+```yaml
+  screens:
+    weather:
+      frame_rate: 4                 # redraw 4 times a second while showing, for the animation
+      dwell: 15
+      weather:
+        weather: weather.home       # any HA weather entity with a daily forecast
+        wind_unit: mph              # mph | kmh | ms | kn
+```
+
+| Option | Default | Meaning |
+|---|---|---|
+| `weather` | | The weather entity. The app calls its `weather.get_forecasts` action (a local Home Assistant call) |
+| `forecast_interval` | 900 | Seconds between forecast fetches (a minute after a failed one) |
+| `forecast_type` | `daily` | The forecast type to ask for |
+| `wind_unit` | `mph` | Unit the wind is shown in; the entity's own unit (`wind_speed_unit`) is converted |
+| `animate` | true | `false` for still icons |
+| `animation_speed` | 2 | Icon frames a second (there are 3) |
+
+Icons are drawn in code for sunny, clear night, partly cloudy, cloudy, fog, rain, snow and lightning; other conditions use the nearest. Rain is in millimetres (one decimal under 10 mm). The frame only changes with the icon's animation step and the forecast, so it's drawn once per step and reused. At night (the `night` window) the icons stand still.
+
+### Tide screen
+
+A screen with `tides:` shows high (▲) and low (▼) waters from an entity that lists them, with heights in metres (a small `M` in the top-right corner gives the unit once). Two layouts:
+
+- `list` (default): the next four, time in large digits and height, `IN 2H06` under the next one, and a line with the day's name before the first of another day's.
+- `curve`: today from 00:00 to 24:00 with the sea filled in, a dotted line and a dot for now and the past dimmed, with the next high and low below. Between high and low the curve is a half-cosine (within a few centimetres of the real tide on most UK coasts).
+
+![tides: Newgale (Solva), next high 17:06 5.3 m in 2 h 06, then the table and today's curve](docs/tides.png)
+
+```yaml
+  screens:
+    tides:
+      tides:
+        tides: sensor.solva_tide    # the entity with the list of tides
+        attribute: predictions      # the attribute holding it
+        label: NEWGALE              # shown top left (or centred over the curve)
+        layout: list                # list | curve
+```
+
+| Option | Default | Meaning |
+|---|---|---|
+| `tides`, `attribute` | `predictions` | The entity and its attribute: a list of `[time, height]` pairs (as the [UKHO Tides](https://github.com/ianByrne/HASS-ukho_tides) integration gives, for ADMIRALTY's UK stations), or of dicts |
+| `time_key`, `height_key`, `type_key` | `time`, `height`, `type` | Field names when the items are dicts. A type like `HighWater`, `high` or `H` marks a high; without a type, highs and lows are worked out from the neighbouring heights |
+| `data_time_zone` | UTC | Time zone of times that don't carry one (UKHO Tides gives UTC). Times are shown in Home Assistant's time zone |
+| `label` | | Place name |
+| `layout` | `list` | `list` or `curve` |
+| `max_height` | highest tide + 10 % | Top of the curve, in metres |
+
+With no tides to come (entity missing or empty), the screen shows the label and `NO DATA`.
 
 ### Conditional and priority screens
 

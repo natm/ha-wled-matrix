@@ -9,6 +9,10 @@ rotation while their `show_if` entity is on, for at most `max_time` seconds). An
 screen and stops flashing and fast animation. A screen with `frame_rate` is redrawn that many times a second while
 it's showing (for animation), except at night.
 
+Weather screens read a weather entity's daily forecast with the `weather.get_forecasts` action every
+`forecast_interval` seconds (a local Home Assistant call); tide screens read a list of high and low waters from an
+entity's attribute.
+
 See README.md for the configuration.
 """
 
@@ -23,6 +27,8 @@ from wm_ddp import DdpSender
 from wm_mdi import MdiIcons
 from wm_power import entities as power_entities, render_power_flow
 from wm_render import items, render_screen
+from wm_tides import parse_events, render_tides
+from wm_weather import animation_phase, render_weather
 
 try:
     from zoneinfo import ZoneInfo
@@ -51,6 +57,8 @@ class WledMatrix(Hass):
                     raise ValueError(f"matrix {m['host']}: unknown screen {name!r}")
         self.tz = self.home_timezone()
         self.showing = {}  # host -> screen name drawn last
+        self.forecasts = {}  # weather entity -> (monotonic time fetched, daily forecast list or None)
+        self.frames = {}  # (screen, size) -> (key, pixels): a weather frame only changes with its phase and data
         self.last_draw = {}  # host -> monotonic time of the last frame sent
         self.run_every(self.tick, "now", self.refresh)
         rates = [float(s["frame_rate"]) for s in self.screens.values()
@@ -133,6 +141,28 @@ class WledMatrix(Hass):
         home = tuple(map(float, home)) if None not in home else None
         return normalise(items, cfg, home, float(cfg.get("max_age", 15))), home
 
+    def now(self):
+        return datetime.datetime.now(self.tz) if self.tz else datetime.datetime.now().astimezone()
+
+    def forecast(self, cfg):
+        """The daily forecast for the screen's weather entity, fetched again every `forecast_interval` seconds
+        (or a minute after a failed fetch)."""
+        entity = cfg["weather"]
+        fetched, days = self.forecasts.get(entity, (None, None))
+        now = time.monotonic()
+        wait = float(cfg.get("forecast_interval", 900)) if days else 60.0
+        if fetched is None or now - fetched >= wait:
+            try:
+                result = self.call_service("weather/get_forecasts", entity_id=entity,
+                                           type=cfg.get("forecast_type", "daily"))
+                days = find_forecast(result, entity) or days
+            except Exception as err:  # keep the last forecast; try again in a minute
+                self.log(f"{entity}: get_forecasts failed: {err}", level="WARNING")
+            if days is None:
+                self.log(f"{entity}: no forecast returned", level="WARNING")
+            self.forecasts[entity] = (now, days)
+        return days
+
     def tick(self, kwargs):
         night = self.is_night()
         for m in self.matrices:
@@ -173,6 +203,26 @@ class WledMatrix(Hass):
             cfg = screen["power_flow"]
             states = {entity: self.get_state(entity) for _, entity in power_entities(cfg)}
             pixels = render_power_flow(cfg, states, width, height, self.mdi, t=time.monotonic(), night=night)
+        elif "weather" in screen:
+            cfg = screen["weather"]
+            attrs = self.get_state(cfg["weather"], attribute="all") or {}
+            attrs = attrs.get("attributes", {}) if isinstance(attrs, dict) else {}
+            units = {"temperature": attrs.get("temperature_unit"), "wind_speed": attrs.get("wind_speed_unit")}
+            days, now, t = self.forecast(cfg), self.now(), time.monotonic()
+            key = (id(days), animation_phase(cfg, t, night), night, now.date(), tuple(units.values()))
+            cached = self.frames.get((name, width, height))
+            if cached and cached[0] == key:
+                pixels = cached[1]
+            else:
+                pixels = render_weather(cfg, days, now, width, height, t=t, night=night, units=units)
+                self.frames[(name, width, height)] = (key, pixels)
+        elif "tides" in screen:
+            cfg = screen["tides"]
+            raw = self.get_state(cfg["tides"], attribute=cfg.get("attribute", "predictions"))
+            zone = ZoneInfo(cfg["data_time_zone"]) if cfg.get("data_time_zone") and ZoneInfo else datetime.timezone.utc
+            events = parse_events(raw if isinstance(raw, list) else [], cfg, zone)
+            now = self.now()
+            pixels = render_tides(cfg, events, now, now.tzinfo, width, height)
         else:
             values = [self.value(item["entity"]) if "entity" in item else None for item in items(screen)]
             pixels = render_screen(screen, values, width, height, self.mdi)
@@ -184,3 +234,16 @@ class WledMatrix(Hass):
             self.sender.send(host, pixels)
         except OSError as err:
             self.log(f"{host}: send failed: {err}", level="WARNING")
+
+
+def find_forecast(result, entity):
+    """The forecast list in a `weather.get_forecasts` reply, wherever AppDaemon's version puts it
+    ({"result": {"response": {entity: {"forecast": [...]}}}} in AppDaemon 4.5)."""
+    if isinstance(result, dict):
+        if entity in result and isinstance(result[entity], dict) and isinstance(result[entity].get("forecast"), list):
+            return result[entity]["forecast"]
+        for value in result.values():
+            found = find_forecast(value, entity)
+            if found is not None:
+                return found
+    return None
