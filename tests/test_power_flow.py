@@ -8,7 +8,7 @@ import unittest
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "apps", "wled_matrix"))
 
 import wm_power as wp  # noqa: E402
-from wm_text import TEXT, text_width  # noqa: E402
+from wm_text import TEXT, TINY, text_width  # noqa: E402
 
 CFG = {"solar": ["sensor.pv", "sensor.pv_ac"], "soc": "sensor.soc", "battery": "sensor.batt", "load": "sensor.load",
        "ev": "sensor.ev", "grid": "sensor.grid", "max_kw": 10}
@@ -86,9 +86,72 @@ class Drawing(unittest.TestCase):
         self.assertTrue(all(at(a, x, y) == tuple(wp.DEFAULT_COLOURS["line"]) for x, y in line))
         self.assertEqual(a, b)
 
-    def test_dots_move_by_day_and_stand_still_at_night(self):
+    def test_comets_move_by_day_and_slowly_at_night(self):
         self.assertNotEqual(self.frame(t=0, pv=5000), self.frame(t=0.5, pv=5000))
-        self.assertEqual(self.frame(t=0, night=True, pv=5000), self.frame(t=0.5, night=True, pv=5000))
+        # At night the app draws once a second: each second the comets move on by `night_speed` (1 px)...
+        self.assertNotEqual(self.frame(t=10, night=True, pv=5000), self.frame(t=11, night=True, pv=5000))
+        line = wp.path_points(wp.PATHS["solar"])
+        head = tuple(wp.DEFAULT_COLOURS["solar"])
+
+        def first_head(t):
+            px = self.frame(t=t, night=True, pv=5000)
+            return next(i for i, (x, y) in enumerate(line) if at(px, x, y) == head)
+        self.assertEqual(first_head(11), first_head(10) + 1)
+
+    def test_battery_pulse_still_at_night(self):
+        def fill_edge(t, night):
+            px = self.frame(t=t, night=night, batt=2000, soc=50)
+            return [at(px, x, y) for y in range(43, 55) for x in range(2, 11)]
+        self.assertNotEqual(fill_edge(0.0, False), fill_edge(0.5, False))
+        self.assertEqual(fill_edge(0.0, True), fill_edge(0.5, True))
+
+    def test_comet_tail_fades_behind_the_head(self):
+        """Each comet: the head at full colour, then 50 %, 22 % and 10 % behind it, on a 12 % line."""
+        line = wp.path_points(wp.PATHS["grid"])
+        red = tuple(wp.DEFAULT_COLOURS["import"])
+        px = self.frame(t=0, grid=3000)
+        colours = [at(px, x, y) for x, y in line]
+        heads = [i for i, c in enumerate(colours) if c == red]
+        self.assertTrue(heads)
+        self.assertTrue(all(b - a == wp.COMET_SPACING for a, b in zip(heads, heads[1:])))
+        for h in heads:
+            for k, b in enumerate(wp.COMET_TAIL):
+                if h - k >= 0:
+                    self.assertEqual(colours[h - k], wp.scale(red, b))
+        others = set(range(len(line))) - {h - k for h in heads for k in range(len(wp.COMET_TAIL))}
+        self.assertTrue(others)
+        self.assertTrue(all(colours[i] == wp.scale(red, wp.COMET_LINE) for i in others))
+
+    def test_comets_move_one_or_two_pixels_a_frame(self):
+        """At 5 frames a second the comets step 1-2 px, never as much as half the spacing (no wagon-wheel)."""
+        for watts in (100, 3000, 10000, 30000):
+            step = wp.dot_speed(watts, 10000) / 5
+            self.assertGreaterEqual(step, 1)
+            self.assertLessEqual(step, 2)
+            self.assertLess(step, wp.COMET_SPACING / 2)
+
+    def test_car_line_is_always_the_car_colour(self):
+        line = wp.path_points(wp.PATHS["ev"])
+        car = tuple(wp.DEFAULT_COLOURS["ev"])
+        allowed = {car} | {wp.scale(car, b) for b in wp.COMET_TAIL + (wp.COMET_LINE,)}
+        for supply in (dict(pv=9000), dict(grid=9000), dict(batt=-9000), dict(pv=3000, grid=5000)):
+            for t in (0, 0.2, 0.4, 0.6):
+                px = self.frame(t=t, ev=7000, **supply)
+                self.assertTrue({at(px, x, y) for x, y in line} <= allowed, supply)
+
+    def test_kw_label_sits_under_the_house_figure(self):
+        """"KW" in the 3x5 font at 45 % of the house white, rows 48-52, clear of a wide house figure ("12.4")."""
+        px = self.frame(load=12400)
+        dim = wp.scale(wp.DEFAULT_COLOURS["house"], 0.45)
+        rows = {y for y in range(64) for x in range(64) if at(px, x, y) == dim}
+        self.assertEqual(rows, set(range(48, 53)))
+        self.assertGreaterEqual(wp.KW_LABEL_Y, wp.HOUSE_NUMBER_Y + 7 + 3)  # 3 clear rows under the 7-row figure
+        w, kw_w = text_width("12.4", TEXT), text_width("KW", TINY)
+        number = {(x, y) for x in range(32 - w // 2, 32 - w // 2 + w) for y in range(wp.HOUSE_NUMBER_Y, wp.HOUSE_NUMBER_Y + 7)}
+        label = {(x, y) for x in range(32 - kw_w // 2, 32 - kw_w // 2 + kw_w) for y in range(wp.KW_LABEL_Y, wp.KW_LABEL_Y + 5)}
+        self.assertFalse(number & label)
+        line = {p for pts in wp.PATHS.values() for p in wp.path_points(pts)}
+        self.assertFalse(line & label)
 
     def test_grid_colour_follows_direction(self):
         x, y = wp.PATHS["grid"][0]

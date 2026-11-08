@@ -13,10 +13,10 @@ An [AppDaemon](https://appdaemon.readthedocs.io/) app that shows Home Assistant 
 - **Camera screens:** a Home Assistant camera's still, refreshed every `refresh` seconds while the screen is shown (needs Pillow).
 - Any Home Assistant entity with a numeric state can be shown, and on/off entities (switches, lights, binary sensors) as `on`/`off`.
 - **Aircraft screens:** live aircraft near home from your own ADS-B receiver (readsb / tar1090 `aircraft.json`, or a Home Assistant entity listing them): a **radar**, the **nearest aircraft**, a **departures board**, or a flashing **alert** for low flyers, helicopters and emergencies.
-- **Power-flow screen:** solar, grid, battery, car and house joined by lines, with dots moving the way the power flows, faster with more power (Victron or any other system with power sensors).
+- **Power-flow screen:** solar, grid, battery, car and house joined by lines, with small comets moving the way the power flows, faster with more power (Victron or any other system with power sensors).
 - **Conditional and priority screens:** show a screen only while an entity is on, or let it interrupt the rotation (e.g. an alert).
 - **Animation:** a screen can set its own `frame_rate`, redrawn faster only while it's showing.
-- **Night dimming:** dim every screen (and stop flashing and animation) between two times.
+- **Night dimming:** dim every screen (and stop flashing and fast animation) between two times.
 
 ## Install
 
@@ -209,14 +209,14 @@ Positions update once a second (the receiver's rate), so dots and numbers move a
 
 ### Power-flow screen
 
-A screen with `power_flow:` shows where the power is going right now: the sun and solar power top left, the grid top right, the battery (filled and coloured by charge) bottom left, the car bottom right, and the house in the middle. Bright dots move along each line in the direction of flow, faster with more power. Numbers are kW with one decimal.
+A screen with `power_flow:` shows where the power is going right now: the sun and solar power top left, the grid top right, the battery (filled and coloured by charge) bottom left, the car bottom right, and the house in the middle. Small comets (a bright head with a 3-pixel fading tail, so the direction shows even in a still frame) move along each dim line in the direction of flow, faster with more power. Numbers are kW with one decimal; a small `KW` under the house figure gives the unit once for all of them.
 
 ![power flow: sunny with the car charging; evening on the battery; cheap-rate night charging the battery and car from the grid](docs/power-flow.png)
 
 ```yaml
   screens:
     power_flow:
-      frame_rate: 5                 # redraw 5 times a second while showing, so the dots move smoothly (see below)
+      frame_rate: 5                 # redraw 5 times a second while showing, so the comets move smoothly (see below)
       power_flow:
         solar: [sensor.pv_dc_power, sensor.pv_ac_power]   # one entity or a list, added up
         grid: sensor.grid_power     # W, + = importing, - = exporting
@@ -225,14 +225,15 @@ A screen with `power_flow:` shows where the power is going right now: the sun an
         load: sensor.house_load_power        # W
         ev: sensor.ev_charger_power          # W
         load_includes_ev: true      # the load sensor already counts the car: show the house as load - car
-        max_kw: 10                  # dots reach full speed at this power
+        max_kw: 10                  # comets reach full speed at this power
+        # night_speed: 1             # comets' pixels a second during the night window
 ```
 
 | Part | Colours |
 |---|---|
 | Grid | red while importing, green while exporting, grey when idle |
-| Battery line | blue, dots towards the house when discharging and towards the battery when charging; the edge of the fill pulses |
-| Car line | the colour of the biggest supply at the moment (solar yellow, grid red or battery blue) |
+| Battery line | blue, comets towards the house when discharging and towards the battery when charging; the edge of the fill pulses |
+| Car line | always the car's colour (`ev`, light blue) |
 | Battery fill and % | `soc_thresholds` (default green from 30 %, orange from 20 %), else `soc_colour` (red) |
 | Anything under `idle_w` | grey, with a still, dark line |
 
@@ -240,12 +241,13 @@ A screen with `power_flow:` shows where the power is going right now: the sun an
 |---|---|---|
 | `solar`, `grid`, `battery`, `soc`, `load`, `ev` | | Entities (W, and % for `soc`); any can be left out. Unknown states show `-` |
 | `load_includes_ev` | false | Subtract the car from the load for the house figure (on Victron systems with the chargers on the inverter's AC output, `AC consumption` includes them) |
-| `max_kw` | 10 | Power at which the dots reach full speed (4 to 16 pixels a second) |
+| `max_kw` | 10 | Power at which the comets reach full speed (5 to 10 pixels a second: 1 to 2 pixels a frame at `frame_rate: 5`, so they never seem to run backwards) |
+| `night_speed` | 1 | Pixels a second the comets move during the `night` window (the screen is then drawn once every `refresh`); the battery pulse stands still |
 | `idle_w` | 50 | Below this a flow counts as idle and shows `0` |
 | `soc_thresholds`, `soc_colour` | see above | `[{above: <percent>, colour: [r, g, b]}, …]` and the colour under all of them |
 | `colours` | | Override any of `solar`, `import`, `export`, `battery`, `ev`, `house`, `idle`, `line`, `moon`, `outline` |
 
-**`frame_rate`** (any screen): frames per second while that screen is showing, on a separate faster timer; the rotation and every other screen keep to `refresh`. Without it the dots still move, but only once every `refresh`. During the `night` window it's ignored and the dots stand still. Each frame is a few milliseconds of pure Python, and DDP is one small UDP burst, so 5 frames a second on several matrices is light work.
+**`frame_rate`** (any screen): frames per second while that screen is showing, on a separate faster timer; the rotation and every other screen keep to `refresh`. Without it the comets still move, but only once every `refresh`. During the `night` window it's ignored: the screen is drawn once every `refresh` and the power-flow comets creep along at `night_speed`. Each frame is a few milliseconds of pure Python, and DDP is one small UDP burst, so 5 frames a second on several matrices is light work.
 
 ### Conditional and priority screens
 
@@ -280,7 +282,7 @@ wled_matrix:
   night:
     start: "22:00"
     end: "07:00"
-    brightness: 0.25     # every pixel scaled to 25 %; flashing and animation stop
+    brightness: 0.25     # every pixel scaled to 25 %; flashing and fast animation stop
     # time_zone: Europe/London   # default: Home Assistant's time zone
 ```
 

@@ -6,8 +6,8 @@ to its normal effect or preset after its realtime timeout (about 2.5 s by defaul
 
 Screens can be conditional (`show_if`: only while an entity is on) or priority (`priority: true`: interrupt the
 rotation while their `show_if` entity is on, for at most `max_time` seconds). An optional `night` window dims every
-screen and stops flashing and animation. A screen with `frame_rate` is redrawn that many times a second while it's
-showing (for animation), except at night.
+screen and stops flashing and fast animation. A screen with `frame_rate` is redrawn that many times a second while
+it's showing (for animation), except at night.
 
 See README.md for the configuration.
 """

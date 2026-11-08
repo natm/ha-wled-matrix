@@ -1,11 +1,13 @@
 """Power-flow screen: where the power is going now, as an animated diagram.
 
 Sun and solar power top left, the grid pylon top right, the battery gauge and charge bottom left, the car and its
-charging power bottom right, and the house and its load in the middle. A line joins each to the house; bright dots
-move along it in the direction of flow, faster with more power. Anything below `idle_w` is grey and still.
+charging power bottom right, and the house and its load in the middle, with a small "KW" under it. A dim line joins
+each to the house; bright "comets" (a head with a 3 px fading tail) move along it in the direction of flow, faster
+with more power. Anything below `idle_w` is grey and still. The car's line is always the car's colour.
 
-Pure Python, no dependencies. `t` is a time in seconds: the dots are placed from it, so frames drawn at any rate
-line up (the app redraws this screen `frame_rate` times a second while it's showing). At night the dots stand still.
+Pure Python, no dependencies. `t` is a time in seconds: the comets are placed from it, so frames drawn at any rate
+line up (the app redraws this screen `frame_rate` times a second while it's showing). At night the comets keep moving,
+slowly (`night_speed` px/s, drawn once a second), and the battery's pulse stands still.
 """
 
 import math
@@ -41,6 +43,8 @@ PATHS = {
     "battery": [(12, 39), (16, 35), (23, 35)],
     "ev": [(40, 35), (45, 35), (50, 40)],
 }
+HOUSE_NUMBER_Y = 38  # the house figure (5x7, rows 38-44)
+KW_LABEL_Y = 48  # "KW" (3x5, rows 48-52): three clear rows under the house figure
 
 
 def scale(colour, k):
@@ -82,8 +86,14 @@ def path_points(pts):
     return out
 
 
-def dot_speed(watts, max_w, slow=4.0, fast=16.0):
-    """Pixels per second a dot moves: `slow` at a trickle, `fast` from `max_w` up."""
+COMET_SPACING = 7  # px between comet heads
+COMET_TAIL = (1.0, 0.5, 0.22, 0.1)  # brightness of the head and the 3 px behind it
+COMET_LINE = 0.12  # brightness of the line under the comets
+
+
+def dot_speed(watts, max_w, slow=5.0, fast=10.0):
+    """Pixels per second a comet moves: `slow` at a trickle, `fast` from `max_w` up. At 5 frames a second that's 1-2 px
+    a frame, always well under the spacing, so the comets never seem to run backwards (the wagon-wheel effect)."""
     frac = max(0.0, min(1.0, abs(watts) / max_w)) if max_w > 0 else 1.0
     return slow + (fast - slow) * frac
 
@@ -118,8 +128,9 @@ class PowerCanvas(Canvas):
         if unit:
             draw_text(self, unit, end, y + 2, scale(colour, 0.7), TINY)
 
-    def flow(self, pts, colour, watts, t, idle_w, max_w, reverse=False, spacing=6, line=(28, 28, 28)):
-        """A dim line with bright dots (each with a short tail) moving along it, faster with more power."""
+    def flow(self, pts, colour, watts, t, idle_w, max_w, reverse=False, line=(28, 28, 28), speed=None):
+        """A dim line with comets (bright head, fading tail behind) moving along it, faster with more power.
+        `speed` overrides the pixels per second (used at night)."""
         points = path_points(pts)
         if reverse:
             points = points[::-1]
@@ -128,13 +139,14 @@ class PowerCanvas(Canvas):
                 self.put(x, y, line)
             return
         for x, y in points:
-            self.put(x, y, scale(colour, 0.3))
-        offset = int(t * dot_speed(watts, max_w)) % spacing
-        for i, (x, y) in enumerate(points):
-            if (i - offset) % spacing == 0:
-                self.put(x, y, colour)
-                if i > 0:
-                    self.put(*points[i - 1], scale(colour, 0.45))  # tail behind the dot shows the direction
+            self.put(x, y, scale(colour, COMET_LINE))
+        v = dot_speed(watts, max_w) if speed is None else speed
+        offset = int(t * v) % COMET_SPACING
+        for i in range(len(points)):
+            if (i - offset) % COMET_SPACING == 0:
+                for k, b in enumerate(COMET_TAIL):  # the tail behind the head shows the direction in a still frame
+                    if i - k >= 0:
+                        self.put(*points[i - k], scale(colour, b))
 
     def battery(self, x0, y0, w, h, soc, colour, outline, watts, t, idle_w):
         """Upright battery: cap, outline, filled from the bottom by charge; the edge of the fill pulses while it
@@ -212,23 +224,18 @@ def render_power_flow(cfg, states, width=64, height=64, mdi=None, t=0.0, night=F
     idle_w = float(cfg.get("idle_w", 50))
     max_w = float(cfg.get("max_kw", 10)) * 1000
     v = readings(cfg, states)
-    if night:
-        t = 0.0  # dots stand still at night
+    speed = float(cfg.get("night_speed", 1.0)) if night else None  # slow comets at night, drawn once a second
     c = PowerCanvas(width, height)
     live = lambda w: w is not None and abs(w) >= idle_w  # noqa: E731
 
     solar, grid, batt, ev = v["solar"], v["grid"], v["battery"], v["ev"]
     gcol = col["import"] if live(grid) and grid > 0 else col["export"] if live(grid) else col["idle"]
-    # The car's line takes the colour of the biggest supply right now.
-    sources = [(solar or 0, col["solar"]), (max(grid or 0, 0), col["import"]), (max(-(batt or 0), 0), col["battery"])]
-    biggest = max(sources, key=lambda s: s[0])
-    supply = biggest[1] if biggest[0] >= idle_w else col["idle"]
 
-    kw_args = dict(idle_w=idle_w, max_w=max_w, line=col["line"])
+    kw_args = dict(idle_w=idle_w, max_w=max_w, line=col["line"], speed=speed)
     c.flow(PATHS["solar"], col["solar"], solar, t, **kw_args)
     c.flow(PATHS["grid"], gcol, grid, t, reverse=live(grid) and grid < 0, **kw_args)
     c.flow(PATHS["battery"], col["battery"], batt, t, reverse=live(batt) and batt > 0, **kw_args)
-    c.flow(PATHS["ev"], supply, ev, t, **kw_args)
+    c.flow(PATHS["ev"], col["ev"], ev, t, **kw_args)  # always the car's colour (Nat, 2026-11-08)
 
     # Solar, top left
     if live(solar):
@@ -243,11 +250,12 @@ def render_power_flow(cfg, states, width=64, height=64, mdi=None, t=0.0, night=F
     c.number(kw(grid, idle_w), "", 62, 14, gcol, align="right")
     # House, middle
     c.icon(mdi, "mdi:home", 24, 21, 16, col["house"])
-    c.number(kw(v["house"], idle_w), "", 32, 38, col["house"], align="center")
+    c.number(kw(v["house"], idle_w), "", 32, HOUSE_NUMBER_Y, col["house"], align="center")
+    c.text("KW", 32, KW_LABEL_Y, scale(col["house"], 0.45), font=TINY, align="center")  # the unit, once for all
     # Battery, bottom left
     soc = v["soc"]
     scol = soc_colour(soc, cfg)
-    c.battery(1, 41, 11, 15, soc, scol, col["outline"], batt, t, idle_w)
+    c.battery(1, 41, 11, 15, soc, scol, col["outline"], batt, 0.0 if night else t, idle_w)
     c.number("-" if soc is None else str(int(round(max(0, min(100, soc))))), "%", 0, 56, scol)
     # Car, bottom right
     ecol = col["ev"] if live(ev) else col["idle"]
