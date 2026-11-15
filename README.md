@@ -131,7 +131,7 @@ Row / cell options:
 | `icon_size` | MDI icon size in pixels (default: the cell height, max 24) |
 | `row`, `col`, `rowspan`, `colspan` | Grid screens only: the cell's position and size (from 0) |
 | `entity` | Leave out for an icon-only cell. Any entity with a numeric state, or an on/off state with `format: onoff`. Unavailable or unknown shows `-` |
-| `format` | `percent` (0–100, `%`), `power` (W, or kW from 1000 W), `number` (rounded), `decimal1` / `decimal2` (that many decimals), `mbps` (Mbit/s in: `M` with one decimal below 10, whole numbers to 999, then `G` in Gbit/s), `onoff` (shows `on`/`off` for switches, lights and binary sensors; on counts as 1 and off as 0 for `thresholds`) |
+| `format` | `percent` (0–100, `%`), `power` (W, or kW from 1000 W), `number` (rounded), `decimal1` / `decimal2` (that many decimals), `mbps` (Mbit/s in: `M` with one decimal below 10, whole numbers to 999, then `G` in Gbit/s), `onoff` (shows `on`/`off` for switches, lights and binary sensors; on counts as 1 and off as 0 for `thresholds`), `clock` (minutes after midnight shown as a time, e.g. 402 → `6:42`) |
 | `unit` | Override the unit text (characters available: `% W k C ° h M G`) |
 | `colour` | `[r, g, b]` default colour |
 | `dwell` | Screen level: seconds this screen stays up in the rotation (default: the matrix's `dwell`) |

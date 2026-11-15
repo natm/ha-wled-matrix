@@ -100,6 +100,9 @@ def format_value(value, fmt):
         if abs(value) < 10:
             return f"{value:.1f}", "M"
         return str(int(round(value))), "M"
+    if fmt == "clock":  # minutes after midnight in, H:MM out (e.g. 402 -> 6:42)
+        m = int(round(value)) % 1440
+        return f"{m // 60}:{m % 60:02d}", ""
     if fmt == "number":
         return str(int(round(value))), ""
     if fmt.startswith("decimal"):  # e.g. decimal1
