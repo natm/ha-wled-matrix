@@ -12,6 +12,8 @@ it's showing (for animation), except at night.
 
 Stars screens show weekly star points for children (`style: week`), or a pop-up when a star changes (`style: alert`).
 
+An aquarium screen (`aquarium: {}`) is an animated fish tank, needing no entities.
+
 Network screens show internet speed and the line in use (`style: big`), or a failover alert (`style: alert`).
 
 With `web: true`, AppDaemon's web server also serves a live view of the matrices at `/app/matrix`: a mirror of the
@@ -31,6 +33,7 @@ import time
 from appdaemon.plugins.hass.hassapi import Hass
 
 from wm_aircraft import AircraftSource, normalise, render_aircraft
+from wm_aquarium import render_aquarium
 from wm_camera import CameraSource
 from wm_ddp import DdpSender
 from wm_mdi import MdiIcons
@@ -247,6 +250,8 @@ class WledMatrix(Hass):
             cfg = screen["network"]
             states = {entity: self.get_state(entity) for entity in network_entities(cfg)}
             pixels = render_network(cfg, states, width, height, self.mdi, t=time.monotonic(), night=night)
+        elif "aquarium" in screen:
+            pixels = render_aquarium(screen["aquarium"], width, height, t=time.monotonic(), night=night)
         elif "stars" in screen:
             cfg = screen["stars"]
             states = {entity: self.get_state(entity) for entity in stars_entities(cfg)}
