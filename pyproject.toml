@@ -1,5 +1,6 @@
 # Tooling only: the app itself is installed by HACS (or by copying apps/wled_matrix/), not by pip.
-# Black and ruff share one profile: 120 columns, Python 3.9 as the floor (zoneinfo has a fallback for older).
+# Black and ruff share one profile: 120 columns, Python 3.9 syntax as the floor so the code stays runnable on older
+# AppDaemon installs (zoneinfo has a fallback). CI runs the tests on 3.11 to 3.13; 3.9 has no builds for current runners.
 
 [tool.black]
 line-length = 120
