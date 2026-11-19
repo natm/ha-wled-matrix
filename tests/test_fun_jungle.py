@@ -6,7 +6,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "apps", "wled_matrix"))
 
-import wm_jungle as wj  # noqa: E402
+import wm_fun_jungle as wj  # noqa: E402
 
 
 class Jungle(unittest.TestCase):

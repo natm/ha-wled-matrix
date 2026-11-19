@@ -6,7 +6,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "apps", "wled_matrix"))
 
-import wm_aquarium as wa  # noqa: E402
+import wm_fun_aquarium as wa  # noqa: E402
 
 
 class Aquarium(unittest.TestCase):

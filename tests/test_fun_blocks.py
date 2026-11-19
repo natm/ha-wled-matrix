@@ -8,7 +8,7 @@ import unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "apps", "wled_matrix"))
 
-import wm_blocks as wm  # noqa: E402
+import wm_fun_blocks as wm  # noqa: E402
 
 
 def frame_ok(px):

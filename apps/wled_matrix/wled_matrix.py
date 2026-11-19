@@ -40,14 +40,14 @@ import time
 from appdaemon.plugins.hass.hassapi import Hass
 
 from wm_aircraft import AircraftSource, normalise, render_aircraft
-from wm_aquarium import render_aquarium
-from wm_jungle import render_jungle
-from wm_platformer import render_platformer
-from wm_blocks import render_blocks
-from wm_surf import render_surf
-from wm_quest import render_quest
-from wm_kart import render_kart
-from wm_duel import render_duel
+from wm_fun_aquarium import render_aquarium
+from wm_fun_jungle import render_jungle
+from wm_fun_platformer import render_platformer
+from wm_fun_blocks import render_blocks
+from wm_fun_surf import render_surf
+from wm_fun_quest import render_quest
+from wm_fun_kart import render_kart
+from wm_fun_duel import render_duel
 from wm_camera import CameraSource
 from wm_ddp import DdpSender
 from wm_mdi import MdiIcons

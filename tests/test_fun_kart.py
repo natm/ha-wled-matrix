@@ -7,7 +7,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "apps", "wled_matrix"))
 
-import wm_kart as wk  # noqa: E402
+import wm_fun_kart as wk  # noqa: E402
 
 
 class Kart(unittest.TestCase):
