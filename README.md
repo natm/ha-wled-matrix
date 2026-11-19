@@ -504,6 +504,11 @@ Set `web: true` and the app adds a page to AppDaemon's own web server: `http://<
 - **Preview:** pick any screen, even one not in a rotation, and it's drawn on demand from live Home Assistant states,
   at 5 to 30 frames a second, by day or (tick Night) dimmed as at night. Handy for designing screens away from the
   panels.
+- **Editor:** under the preview, the selected screen's YAML as it is in your config. Change it and press Run, and
+  the preview draws your version while the panel keeps showing the real one. The screen list also offers every
+  screen type, with starting YAML, so you can try one that isn't in your config yet; Reroll draws its
+  `{random: …}` values again. Nothing is saved: copy the YAML into `apps.yaml` under `screens:` when it's right.
+- **All:** every matrix side by side with what it shows, and a picker to show a screen now (see the dashboard docs).
 - LED-dot or square look; the page remembers your choices.
 
 Give each matrix a `name:` (e.g. `Kitchen`) to show it in the list instead of its address. There's no login:
