@@ -56,6 +56,9 @@ wled_matrix:
       dwell: 10               # seconds per screen when there's more than one
       screens: [energy]
       enabled_entity: input_boolean.kitchen_matrix   # optional: only draw while this is on
+      # name: Kitchen                                # shown in the live view; names the sensor below
+      # state_entity: sensor.kitchen_matrix          # the matrix's sensor (default sensor.wled_matrix_<name>)
+      # select_entity: input_select.kitchen_matrix   # an input_select helper to pick a screen from a dashboard
   screens:
     energy:
       rows:
@@ -475,6 +478,22 @@ and for the generic ones like `dwell`:
 
 Both numbers must be whole; anything else stops the app at start-up with the screen and option named. A screen listed
 on several matrices is one screen, so a new draw when one matrix switches to it also applies to the others.
+
+### Home Assistant dashboard
+
+Each matrix has a sensor whose state is the screen it is showing (`sensor.wled_matrix_<name>`), with the rotation,
+the next screen and any pinned screen as attributes. Give a matrix a `select_entity` (an input_select helper) and
+the app fills it with `Auto` and every screen: pick one from any card and the matrix shows it at the next frame, until
+`Auto`. The live view below can be embedded in a Webpage card, and a dashboard card ships with the app:
+
+```yaml
+type: custom:wled-matrix-card
+url: http://<appdaemon host>:5050/app
+matrix: Kitchen
+picker: chips          # or dialog: tap the status line for a list of screens
+```
+
+[Dashboard docs](docs/dashboard.md): the sensor, the picker helper, and YAML for each kind of card.
 
 ### Live view in a browser
 
