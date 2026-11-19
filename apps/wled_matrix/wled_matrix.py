@@ -13,6 +13,7 @@ it's showing (for animation), except at night.
 Stars screens show weekly star points for children (`style: week`), or a pop-up when a star changes (`style: alert`).
 
 An aquarium screen (`aquarium: {}`) is an animated fish tank, needing no entities.
+A jungle screen (`jungle: {}`) is an animated rainforest (vines, monkeys, a snake, birds), needing no entities.
 
 Network screens show internet speed and the line in use (`style: big`), or a failover alert (`style: alert`).
 
@@ -34,6 +35,7 @@ from appdaemon.plugins.hass.hassapi import Hass
 
 from wm_aircraft import AircraftSource, normalise, render_aircraft
 from wm_aquarium import render_aquarium
+from wm_jungle import render_jungle
 from wm_camera import CameraSource
 from wm_ddp import DdpSender
 from wm_mdi import MdiIcons
@@ -252,6 +254,8 @@ class WledMatrix(Hass):
             pixels = render_network(cfg, states, width, height, self.mdi, t=time.monotonic(), night=night)
         elif "aquarium" in screen:
             pixels = render_aquarium(screen["aquarium"], width, height, t=time.monotonic(), night=night)
+        elif "jungle" in screen:
+            pixels = render_jungle(screen["jungle"], width, height, t=time.monotonic(), night=night)
         elif "stars" in screen:
             cfg = screen["stars"]
             states = {entity: self.get_state(entity) for entity in stars_entities(cfg)}
