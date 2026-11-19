@@ -54,8 +54,11 @@ wled_matrix:
       width: 64
       height: 64
       dwell: 10               # seconds per screen when there's more than one
-      screens: [energy]
+      screens: [energy]       # the rotation; an entry can be {daily: [a, b, c]}: a different one each day (see below)
       enabled_entity: input_boolean.kitchen_matrix   # optional: only draw while this is on
+      # name: Kitchen                                # shown in the live view; names the sensor below
+      # state_entity: sensor.kitchen_matrix          # the matrix's sensor (default sensor.wled_matrix_<name>)
+      # select_entity: input_select.kitchen_matrix   # an input_select helper to pick a screen from a dashboard
   screens:
     energy:
       rows:
@@ -476,6 +479,51 @@ and for the generic ones like `dwell`:
 Both numbers must be whole; anything else stops the app at start-up with the screen and option named. A screen listed
 on several matrices is one screen, so a new draw when one matrix switches to it also applies to the others.
 
+### A different screen each day
+
+An entry in a matrix's `screens` list can be a `daily` entry: that slot in the rotation shows a different screen each
+day, so the fun screens can take turns without all being in the rotation at once. Name the screen for each weekday,
+or give a list to take in turn:
+
+```yaml
+  matrices:
+    - host: 192.168.1.50
+      screens:
+        - energy
+        - weather
+        - daily:
+            monday: platformer
+            tuesday: kart
+            wednesday: aquarium
+            thursday: jungle
+            friday: surfer
+            saturday: duel
+            sunday: blocks
+    - host: 192.168.1.51
+      screens:
+        - energy
+        - daily: [aquarium, jungle, duel]   # one of these a day, in turn
+```
+
+The day changes at midnight in the home time zone. A weekday mapping needs all seven days, and every screen named must
+be defined under `screens:`. The sensor's `screens` attribute and the live view list the screen chosen for today.
+
+### Home Assistant dashboard
+
+Each matrix has a sensor whose state is the screen it is showing (`sensor.wled_matrix_<name>`), with the rotation,
+the next screen and any pinned screen as attributes. Give a matrix a `select_entity` (an input_select helper) and
+the app fills it with `Auto` and every screen: pick one from any card and the matrix shows it at the next frame, until
+`Auto`. The live view below can be embedded in a Webpage card, and a dashboard card ships with the app:
+
+```yaml
+type: custom:wled-matrix-card
+url: http://<appdaemon host>:5050/app
+matrix: Kitchen
+picker: chips          # or dialog: tap the status line for a list of screens
+```
+
+[Dashboard docs](docs/dashboard.md): the sensor, the picker helper, and YAML for each kind of card.
+
 ### Live view in a browser
 
 Set `web: true` and the app adds a page to AppDaemon's own web server: `http://<appdaemon host>:5050/app/matrix`.
@@ -485,6 +533,11 @@ Set `web: true` and the app adds a page to AppDaemon's own web server: `http://<
 - **Preview:** pick any screen, even one not in a rotation, and it's drawn on demand from live Home Assistant states,
   at 5 to 30 frames a second, by day or (tick Night) dimmed as at night. Handy for designing screens away from the
   panels.
+- **Editor:** under the preview, the selected screen's YAML as it is in your config. Change it and press Run, and
+  the preview draws your version while the panel keeps showing the real one. The screen list also offers every
+  screen type, with starting YAML, so you can try one that isn't in your config yet; Reroll draws its
+  `{random: …}` values again. Nothing is saved: copy the YAML into `apps.yaml` under `screens:` when it's right.
+- **All:** every matrix side by side with what it shows, and a picker to show a screen now (see the dashboard docs).
 - LED-dot or square look; the page remembers your choices.
 
 Give each matrix a `name:` (e.g. `Kitchen`) to show it in the list instead of its address. There's no login:
