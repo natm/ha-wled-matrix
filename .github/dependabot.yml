@@ -1,0 +1,7 @@
+# The app has no pip manifest (HACS copies apps/wled_matrix/ as is), so only the workflow actions are tracked.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

@@ -1,0 +1,24 @@
+# Tooling only: the app itself is installed by HACS (or by copying apps/wled_matrix/), not by pip.
+# Black and ruff share one profile: 120 columns, Python 3.9 syntax as the floor so the code stays runnable on older
+# AppDaemon installs (zoneinfo has a fallback). CI runs the tests on 3.11 to 3.13; 3.9 has no builds for current runners.
+
+[tool.black]
+line-length = 120
+target-version = ["py39"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py39"
+
+[tool.ruff.lint]
+# pycodestyle, pyflakes and isort; E203 (space before ':' in slices) is where black and pycodestyle disagree.
+select = ["E", "F", "W", "I"]
+ignore = ["E203"]
+
+[tool.ruff.lint.per-file-ignores]
+# The live-view page is HTML, CSS and JavaScript in one string; those lines are not Python to wrap.
+"apps/wled_matrix/wm/web.py" = ["E501"]
+
+[tool.ruff.lint.isort]
+# Test files put the app folder on sys.path before importing from it, so those imports sit after that line.
+known-first-party = ["wm", "wled_matrix"]
