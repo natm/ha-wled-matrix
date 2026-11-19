@@ -21,6 +21,12 @@ import math
 
 from ..utils.canvas import Canvas
 from ..utils.text import TEXT, TINY, draw_text, text_width
+from .base import Screen
+
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:  # Python < 3.9
+    ZoneInfo = None
 
 DAY_NAMES = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
 
@@ -224,3 +230,17 @@ def render_tides(cfg, events, now, zone, width=64, height=64):
     else:
         render_list(c, events, now, zone, label, width)
     return c.px
+
+
+class TidesScreen(Screen):
+    key = "tides"
+
+    def entities(self):
+        return [self.cfg["tides"]]
+
+    def render(self, width, height, *, night, t, now):
+        cfg = self.cfg
+        raw = self.state(cfg["tides"], attribute=cfg.get("attribute", "predictions"))
+        zone = ZoneInfo(cfg["data_time_zone"]) if cfg.get("data_time_zone") and ZoneInfo else datetime.timezone.utc
+        events = parse_events(raw if isinstance(raw, list) else [], cfg, zone)
+        return render_tides(cfg, events, now, now.tzinfo, width, height)

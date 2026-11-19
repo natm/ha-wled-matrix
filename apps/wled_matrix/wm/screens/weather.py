@@ -15,6 +15,7 @@ import math
 
 from ..utils.canvas import Canvas
 from ..utils.text import TINY, draw_text, text_width
+from .base import Screen
 
 DAY_NAMES = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
 
@@ -381,3 +382,60 @@ def render_weather(cfg, forecast, now, width=64, height=64, t=0.0, night=False, 
             wind_arrow(c, x + 3, wind_y + 2.5, bearing, WHITE)
         c.text(ws, x + 8, wind_y, WHITE)
     return c.px
+
+
+def find_forecast(result, entity):
+    """The forecast list in a `weather.get_forecasts` reply, wherever AppDaemon's version puts it
+    ({"result": {"response": {entity: {"forecast": [...]}}}} in AppDaemon 4.5)."""
+    if isinstance(result, dict):
+        if entity in result and isinstance(result[entity], dict) and isinstance(result[entity].get("forecast"), list):
+            return result[entity]["forecast"]
+        for value in result.values():
+            found = find_forecast(value, entity)
+            if found is not None:
+                return found
+    return None
+
+
+class WeatherScreen(Screen):
+    key = "weather"
+
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.forecast = (None, None)  # (monotonic time fetched, daily forecast list or None)
+        self.frames = {}  # (width, height) -> (key, pixels): a frame only changes with its phase and data
+
+    def entities(self):
+        return [self.cfg["weather"]]
+
+    def daily_forecast(self, t):
+        """The daily forecast, fetched again every `forecast_interval` seconds (or a minute after a failed fetch)."""
+        entity = self.cfg["weather"]
+        fetched, days = self.forecast
+        wait = float(self.cfg.get("forecast_interval", 900)) if days else 60.0
+        if fetched is None or t - fetched >= wait:
+            try:
+                result = self.call_service(
+                    "weather/get_forecasts", entity_id=entity, type=self.cfg.get("forecast_type", "daily")
+                )
+                days = find_forecast(result, entity) or days
+            except Exception as err:  # keep the last forecast; try again in a minute
+                self.log(f"{entity}: get_forecasts failed: {err}", level="WARNING")
+            if days is None:
+                self.log(f"{entity}: no forecast returned", level="WARNING")
+            self.forecast = (t, days)
+        return days
+
+    def render(self, width, height, *, night, t, now):
+        cfg = self.cfg
+        attrs = self.state(cfg["weather"], attribute="all") or {}
+        attrs = attrs.get("attributes", {}) if isinstance(attrs, dict) else {}
+        units = {"temperature": attrs.get("temperature_unit"), "wind_speed": attrs.get("wind_speed_unit")}
+        days = self.daily_forecast(t)
+        key = (id(days), animation_phase(cfg, t, night), night, now.date(), tuple(units.values()))
+        cached = self.frames.get((width, height))
+        if cached and cached[0] == key:
+            return cached[1]
+        pixels = render_weather(cfg, days, now, width, height, t=t, night=night, units=units)
+        self.frames[(width, height)] = (key, pixels)
+        return pixels

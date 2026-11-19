@@ -17,6 +17,7 @@ import math
 from bisect import bisect_right
 
 from ...utils.canvas import Canvas
+from ..base import Screen
 
 SPEED = 22.0  # px/s the fox runs at (and the world scrolls)
 GRAVITY = 180.0  # px/s2: sets how high a jump of a given length goes
@@ -611,3 +612,10 @@ def render_platformer(cfg, width=64, height=64, t=0.0, night=False):
     if k < 1.0:
         c.px = [scale(p, k) for p in c.px]
     return c.px
+
+
+class PlatformerScreen(Screen):
+    key = "platformer"
+
+    def render(self, width, height, *, night, t, now):
+        return render_platformer(self.cfg, width, height, t=t, night=night)

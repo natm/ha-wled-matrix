@@ -27,6 +27,7 @@ can be drawn on demand. At night one still frame (mid-ride) is drawn.
 import math
 
 from ...utils.canvas import Canvas
+from ..base import Screen
 
 STYLES = {
     # height px at size 1, x of the curl, length of the lip, how fast the shoulder falls away, carve tempo, carve reach
@@ -511,3 +512,10 @@ def render_surf(cfg, width=64, height=64, t=0.0, night=False):
             c.put(x - y // 3, y, col)
             c.put(x - y // 3 - (y + 1) // 3 + y // 3, y + 1, col)
     return c.px
+
+
+class SurfScreen(Screen):
+    key = "surf"
+
+    def render(self, width, height, *, night, t, now):
+        return render_surf(self.cfg, width, height, t=t, night=night)

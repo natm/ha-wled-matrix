@@ -20,6 +20,7 @@ import math
 from bisect import bisect_right
 
 from ...utils.canvas import Canvas
+from ..base import Screen
 
 TILE, COLS, ROWS = 8, 8, 7
 TOP = 8  # the room is drawn below the bar
@@ -609,3 +610,10 @@ def render_quest(cfg, width=64, height=64, t=0.0, night=False):
     if k < 1.0:
         c.px = [scale(p, k) for p in c.px]
     return c.px
+
+
+class QuestScreen(Screen):
+    key = "quest"
+
+    def render(self, width, height, *, night, t, now):
+        return render_quest(self.cfg, width, height, t=t, night=night)

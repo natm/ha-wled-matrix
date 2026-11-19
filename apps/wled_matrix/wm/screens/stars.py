@@ -14,6 +14,7 @@ Pure Python, no dependencies; `t` is a time in seconds (the twinkles), still at 
 from ..utils.canvas import TextCanvas
 from ..utils.text import TEXT, TINY, text_width
 from ..utils.values import to_number
+from .base import Screen
 
 GOLD = (255, 200, 0)
 DIM = (55, 45, 20)
@@ -101,3 +102,13 @@ def render_stars(cfg, states, width=64, height=64, mdi=None, t=0.0, night=False)
     else:
         render_week(c, cfg, states, width, height, mdi)
     return c.px
+
+
+class StarsScreen(Screen):
+    key = "stars"
+
+    def entities(self):
+        return entities(self.cfg)
+
+    def render(self, width, height, *, night, t, now):
+        return render_stars(self.cfg, self.states(self.entities()), width, height, self.mdi, t=t, night=night)

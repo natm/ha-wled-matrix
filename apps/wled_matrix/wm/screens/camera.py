@@ -10,6 +10,8 @@ import os
 import time
 import urllib.request
 
+from .base import Screen
+
 try:
     from PIL import Image, ImageEnhance, ImageOps
 except ImportError:  # only camera screens need Pillow
@@ -98,3 +100,17 @@ def render_image(data, width, height, fit="crop", options=None):
         lut = [round(255 * (i / 255) ** gamma) for i in range(256)]
         img = img.point(lut * 3)
     return list(img.getdata())
+
+
+class CameraScreen(Screen):
+    key = "camera"  # the value is the camera entity, so the options sit on the screen itself (`fit`, `gamma`, ...)
+
+    def entities(self):
+        return [self.screen["camera"]]
+
+    def render(self, width, height, *, night, t, now):
+        # One fetcher for the app: matrices showing the same camera share a fetch, and it keeps the last good frame.
+        source = self.shared(
+            "camera", lambda: CameraSource(self.option("ha_url"), self.option("ha_token"), log=self.host.log)
+        )
+        return source.pixels(self.screen, width, height)

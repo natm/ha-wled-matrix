@@ -6,6 +6,7 @@ Pure Python, no dependencies. A frame is a list of (r, g, b) tuples, row by row.
 from ..utils.canvas import Canvas, draw_mdi, text_width
 from ..utils.glyphs import BIG, ICONS, SMALL
 from ..utils.values import format_value, pick_colour, pick_icon, to_number
+from .base import Screen
 
 
 def items(screen):
@@ -136,3 +137,15 @@ def render_screen(screen, values, width=64, height=64, mdi=None):
     for item, state, rect in zip(items(screen), values, layout(screen, width, height)):
         draw_cell(c, item, to_number(state, item.get("format", "number")), rect, mdi, screen.get("align", "left"))
     return c.px
+
+
+class ItemsScreen(Screen):
+    """The default screen: `rows`, or `grid` + `cells`, of icon + number + unit. Selected when no other type's key is
+    in the config, so it has no `key` of its own."""
+
+    def entities(self):
+        return [item["entity"] for item in items(self.screen) if "entity" in item]
+
+    def render(self, width, height, *, night, t, now):
+        values = [self.state(item["entity"]) if "entity" in item else None for item in items(self.screen)]
+        return render_screen(self.screen, values, width, height, self.mdi)

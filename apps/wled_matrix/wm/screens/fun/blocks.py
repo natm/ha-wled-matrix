@@ -16,6 +16,7 @@ cfg keys: `seed` (default 0): a different run of games.
 from bisect import bisect_right
 
 from ...utils.canvas import Canvas
+from ..base import Screen
 
 COLS, ROWS, CELL = 10, 20, 3
 WELL_X, WELL_Y = 2, 2  # top-left pixel of the well's inside
@@ -413,3 +414,10 @@ def render_blocks(cfg, width=64, height=64, t=0.0, night=False):
             draw_cell(c, bx, y, cc, dy)
     draw_panel(c, rec["next"], lines, score, cleared and 0 <= after - LOCK < 1.0)
     return c.px
+
+
+class BlocksScreen(Screen):
+    key = "blocks"
+
+    def render(self, width, height, *, night, t, now):
+        return render_blocks(self.cfg, width, height, t=t, night=night)

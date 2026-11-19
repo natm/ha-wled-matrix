@@ -22,6 +22,7 @@ import math
 from functools import lru_cache
 
 from ...utils.canvas import Canvas
+from ..base import Screen
 
 HZ = 22  # horizon row
 CAM_H = 10.0
@@ -451,3 +452,10 @@ def render_kart(cfg, width=64, height=64, t=0.0, night=False):
         x = text(canvas, str(pos), 20, 20, hud, 2)
         text(canvas, suffix, x + 1, 25, hud, 1)
     return canvas.px
+
+
+class KartScreen(Screen):
+    key = "kart"
+
+    def render(self, width, height, *, night, t, now):
+        return render_kart(self.cfg, width, height, t=t, night=night)

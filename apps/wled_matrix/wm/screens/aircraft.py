@@ -20,6 +20,7 @@ import urllib.request
 
 from ..utils.canvas import Canvas, draw_mdi
 from ..utils.text import TEXT, draw_text, text_width
+from .base import Screen
 
 EARTH_KM = 6371.0088
 COMPASS = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
@@ -436,3 +437,29 @@ def draw_alert(c, cfg, p, col, mdi, flash, now):
     draw_text(c, alt, (w - text_width(alt)) // 2, 43, band_colour(p["alt"], cfg))
     where = f"{p['km']:.0f}KM {compass(p['bearing'])}"
     draw_text(c, where, (w - text_width(where)) // 2, 51, col["text"])
+
+
+class AircraftScreen(Screen):
+    key = "aircraft"
+
+    def entities(self):
+        return [self.cfg["entity"]] if "entity" in self.cfg else []
+
+    def aircraft(self):
+        """(planes nearest first, home (lat, lon) or None), from the entity or the receiver's URL."""
+        cfg = self.cfg
+        if "entity" in cfg:
+            items = self.state(cfg["entity"], attribute=cfg.get("attribute", "aircraft"))
+        else:  # one fetcher for the app: every screen and matrix using the URL shares a read a second
+            source = self.shared("aircraft", lambda: AircraftSource(log=self.host.log))
+            items = source.fetch(cfg["url"], cfg.get("headers"))
+        home = (
+            cfg.get("latitude", self.state("zone.home", attribute="latitude")),
+            cfg.get("longitude", self.state("zone.home", attribute="longitude")),
+        )
+        home = tuple(map(float, home)) if None not in home else None
+        return normalise(items, cfg, home, float(cfg.get("max_age", 15))), home
+
+    def render(self, width, height, *, night, t, now):
+        planes, home = self.aircraft()
+        return render_aircraft(self.cfg, planes, width, height, self.mdi, night=night, home=home, log=self.host.log)

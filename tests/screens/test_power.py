@@ -1,12 +1,14 @@
 """Power-flow screen and per-screen frame rate. Run from the repo root: python3 -m unittest discover tests"""
 
 import os
+import random
 import sys
 import types
 import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "apps", "wled_matrix"))
 
+from wm.screens import build  # noqa: E402
 from wm.screens import power as wp  # noqa: E402
 from wm.utils.text import TEXT, TINY, text_width  # noqa: E402
 
@@ -227,6 +229,8 @@ class FrameRate(unittest.TestCase):
     def app(self, night=False):
         app = self.mod.WledMatrix()
         app.screens = {"flow": {"frame_rate": 5, "power_flow": CFG}, "plain": {"rows": []}}
+        app.rng, app.args = random.Random(0), {}
+        app.screen_objects = {n: build(app, n, s) for n, s in app.screens.items()}
         app.matrices = [{"host": "a"}, {"host": "b"}]
         app.showing, app.last_draw = {"a": "flow", "b": "plain"}, {}
         app.is_night = lambda: night

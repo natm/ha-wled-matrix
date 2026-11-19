@@ -1,11 +1,13 @@
 """Stars screen (week and alert). Run from the repo root: python3 -m unittest discover tests"""
 
 import os
+import random
 import sys
 import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "apps", "wled_matrix"))
 
+from wm.screens import build  # noqa: E402
 from wm.screens import stars as ws  # noqa: E402
 
 KIDS = [
@@ -93,6 +95,8 @@ class RestartOn(unittest.TestCase):
             },
         }
         app.matrices = [{"host": "a", "screens": ["week", "pop"]}]
+        app.rng, app.args = random.Random(0), {}
+        app.screen_objects = {n: build(app, n, s) for n, s in app.screens.items()}
         app.refresh = 1.0
         app.position, app.elapsed, app.interrupt, app.restart_sig = {"a": 0}, {"a": 0.0}, {}, {}
         app.states = {"input_boolean.on": "on", "counter.w": "1"}

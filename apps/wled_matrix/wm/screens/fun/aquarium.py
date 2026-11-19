@@ -9,6 +9,7 @@ Pure Python, no dependencies. Everything is a function of the time `t` (seconds)
 import math
 
 from ...utils.canvas import Canvas
+from ..base import Screen
 
 # Fish sprites, facing right. Letters pick a colour from the fish's palette: b body, s stripe/second colour,
 # f fin/tail, e eye (always dark), w highlight. "." is transparent.
@@ -192,3 +193,10 @@ def render_aquarium(cfg, width=64, height=64, t=0.0, night=False):
             c.put(x + 1, y, scale(BUBBLE, 0.6))
 
     return c.px
+
+
+class AquariumScreen(Screen):
+    key = "aquarium"
+
+    def render(self, width, height, *, night, t, now):
+        return render_aquarium(self.cfg, width, height, t=t, night=night)

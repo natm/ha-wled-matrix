@@ -457,6 +457,25 @@ For example, a radar in the rotation, and an alert that jumps in when something 
       aircraft: {style: alert, entity: sensor.adsb_radar}
 ```
 
+### Random values
+
+Any whole-number option can be drawn at random instead of fixed: write `{random: [low, high]}` and a new number from
+`low` to `high` (inclusive) is picked every time the screen comes up on a matrix. It works for a screen's own options
+and for the generic ones like `dwell`:
+
+```yaml
+  screens:
+    aquarium:
+      aquarium:
+        fish: {random: [1, 10]}      # a different shoal each visit
+        seed: {random: [0, 9999]}    # and a different sequence of fish
+      frame_rate: 5
+      dwell: {random: [10, 20]}      # stays up 10 to 20 seconds
+```
+
+Both numbers must be whole; anything else stops the app at start-up with the screen and option named. A screen listed
+on several matrices is one screen, so a new draw when one matrix switches to it also applies to the others.
+
 ### Live view in a browser
 
 Set `web: true` and the app adds a page to AppDaemon's own web server: `http://<appdaemon host>:5050/app/matrix`.

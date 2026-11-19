@@ -10,6 +10,7 @@ and the animation is smooth at any `frame_rate`. At night the jungle is drawn st
 import math
 
 from ...utils.canvas import Canvas
+from ..base import Screen
 
 EYE = (10, 10, 20)
 
@@ -496,3 +497,10 @@ def render_jungle(cfg, width=64, height=64, t=0.0, night=False):
             c.put(x, y - 1, col)
 
     return c.px
+
+
+class JungleScreen(Screen):
+    key = "jungle"
+
+    def render(self, width, height, *, night, t, now):
+        return render_jungle(self.cfg, width, height, t=t, night=night)

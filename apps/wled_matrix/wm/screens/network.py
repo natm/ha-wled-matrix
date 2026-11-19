@@ -20,6 +20,7 @@ from ..utils.canvas import TextCanvas
 from ..utils.glyphs import BIG
 from ..utils.text import TEXT, TINY, text_width
 from ..utils.values import to_number
+from .base import Screen
 
 DOWN = (0, 170, 255)  # download: blue, as on the classic internet screen
 UP = (255, 150, 0)  # upload: orange
@@ -186,3 +187,13 @@ def render_network(cfg, states, width=64, height=64, mdi=None, t=0.0, night=Fals
     else:
         render_big(c, cfg, v, width, height, t, night, mdi)
     return c.px
+
+
+class NetworkScreen(Screen):
+    key = "network"
+
+    def entities(self):
+        return entities(self.cfg)
+
+    def render(self, width, height, *, night, t, now):
+        return render_network(self.cfg, self.states(self.entities()), width, height, self.mdi, t=t, night=night)

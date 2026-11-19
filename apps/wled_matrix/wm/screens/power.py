@@ -15,6 +15,7 @@ import math
 from ..utils.canvas import TextCanvas, scale
 from ..utils.text import TINY
 from ..utils.values import to_number
+from .base import Screen
 
 ROLES = ("solar", "grid", "battery", "soc", "load", "ev")
 
@@ -233,3 +234,13 @@ def render_power_flow(cfg, states, width=64, height=64, mdi=None, t=0.0, night=F
     c.icon(mdi, "mdi:car-electric", 51, 42, 13, ecol)
     c.number(kw(ev, idle_w), "", 62, 56, ecol, align="right")
     return c.px
+
+
+class PowerFlowScreen(Screen):
+    key = "power_flow"
+
+    def entities(self):
+        return [entity for _, entity in entities(self.cfg)]
+
+    def render(self, width, height, *, night, t, now):
+        return render_power_flow(self.cfg, self.states(self.entities()), width, height, self.mdi, t=t, night=night)

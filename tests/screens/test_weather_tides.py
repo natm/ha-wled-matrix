@@ -180,20 +180,11 @@ class TideDrawing(unittest.TestCase):
         self.assertEqual(wt.render_tides({}, old, NOW, UTC), wt.render_tides({}, [], NOW, UTC))
 
 
-class AppHelpers(unittest.TestCase):
+class ForecastReply(unittest.TestCase):
     def test_find_forecast_in_an_appdaemon_reply(self):
-        import types
-
-        hassapi = types.ModuleType("appdaemon.plugins.hass.hassapi")
-        hassapi.Hass = object
-        for name in ("appdaemon", "appdaemon.plugins", "appdaemon.plugins.hass"):
-            sys.modules.setdefault(name, types.ModuleType(name))
-        sys.modules.setdefault("appdaemon.plugins.hass.hassapi", hassapi)
-        import wled_matrix
-
         reply = {"result": {"response": {"weather.home": {"forecast": FORECAST}}}}
-        self.assertEqual(wled_matrix.find_forecast(reply, "weather.home"), FORECAST)
-        self.assertIsNone(wled_matrix.find_forecast({"result": {}}, "weather.home"))
+        self.assertEqual(ww.find_forecast(reply, "weather.home"), FORECAST)
+        self.assertIsNone(ww.find_forecast({"result": {}}, "weather.home"))
 
 
 if __name__ == "__main__":

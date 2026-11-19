@@ -1,1 +1,9 @@
-"""Screen types. Each module draws one kind of screen, selected by its config key (see base.py)."""
+"""Screen types: one module per kind of screen, each with a `Screen` subclass (see base.py).
+
+Importing a module here is what registers its type: to add a screen, add its module and one line below.
+"""
+
+from . import aircraft, camera, fun, items, network, power, stars, tides, weather
+from .base import Screen, build
+
+__all__ = ["Screen", "build", "aircraft", "camera", "fun", "items", "network", "power", "stars", "tides", "weather"]
