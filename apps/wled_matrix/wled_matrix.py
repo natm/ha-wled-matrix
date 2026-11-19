@@ -14,6 +14,12 @@ Stars screens show weekly star points for children (`style: week`), or a pop-up 
 
 An aquarium screen (`aquarium: {}`) is an animated fish tank, needing no entities.
 A jungle screen (`jungle: {}`) is an animated rainforest (vines, monkeys, a snake, birds), needing no entities.
+A platformer screen (`platformer: {}`) is an auto-playing 16-bit-style platform game (a fox running, jumping and collecting gems), needing no entities.
+A blocks screen (`blocks: {}`) is an auto-playing falling-block puzzle (rows clear when full), needing no entities.
+A surf screen (`surf: {}`) is a surfer riding waves (`wave_style`: barrel, rolling or storm, and more options), needing no entities.
+A quest screen (`quest: {}`) is an auto-playing top-down adventure (a lantern-mage zapping monsters room to room), needing no entities.
+A kart screen (`kart: {}`) is an auto-playing kart race on a tilted track to the horizon, needing no entities.
+A duel screen (`duel: {}`) is two contenders battling with padded sticks on podiums in a lit TV-studio arena, needing no entities.
 
 Network screens show internet speed and the line in use (`style: big`), or a failover alert (`style: alert`).
 
@@ -36,6 +42,12 @@ from appdaemon.plugins.hass.hassapi import Hass
 from wm_aircraft import AircraftSource, normalise, render_aircraft
 from wm_aquarium import render_aquarium
 from wm_jungle import render_jungle
+from wm_platformer import render_platformer
+from wm_blocks import render_blocks
+from wm_surf import render_surf
+from wm_quest import render_quest
+from wm_kart import render_kart
+from wm_duel import render_duel
 from wm_camera import CameraSource
 from wm_ddp import DdpSender
 from wm_mdi import MdiIcons
@@ -256,6 +268,18 @@ class WledMatrix(Hass):
             pixels = render_aquarium(screen["aquarium"], width, height, t=time.monotonic(), night=night)
         elif "jungle" in screen:
             pixels = render_jungle(screen["jungle"], width, height, t=time.monotonic(), night=night)
+        elif "platformer" in screen:
+            pixels = render_platformer(screen["platformer"], width, height, t=time.monotonic(), night=night)
+        elif "blocks" in screen:
+            pixels = render_blocks(screen["blocks"], width, height, t=time.monotonic(), night=night)
+        elif "surf" in screen:
+            pixels = render_surf(screen["surf"], width, height, t=time.monotonic(), night=night)
+        elif "quest" in screen:
+            pixels = render_quest(screen["quest"], width, height, t=time.monotonic(), night=night)
+        elif "kart" in screen:
+            pixels = render_kart(screen["kart"], width, height, t=time.monotonic(), night=night)
+        elif "duel" in screen:
+            pixels = render_duel(screen["duel"], width, height, t=time.monotonic(), night=night)
         elif "stars" in screen:
             cfg = screen["stars"]
             states = {entity: self.get_state(entity) for entity in stars_entities(cfg)}

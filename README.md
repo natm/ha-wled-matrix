@@ -408,6 +408,102 @@ gets a random look, side, speed and path. At night it's drawn still.
       dwell: 15
 ```
 
+### Platformer screen
+
+An auto-playing early-90s-style platform game: Rusty the fox runs through stages built from the seed, jumping gaps, bouncing on slimes and collecting gems and stars, with a score, a progress bar to the flag and a backdrop that changes from meadow to sunset, moonlight and snow. It needs no entities. At night it's drawn still.
+
+![Platformer screen](docs/platformer.png)
+
+```yaml
+    platformer:
+      platformer:
+        seed: 0          # optional: a different number gives a different run
+      frame_rate: 5
+      dwell: 15
+```
+
+### Blocks screen
+
+An auto-playing falling-block puzzle: four-square shapes fall into a well, a deliberately imperfect player turns and drops them, full rows flash and disappear, and a new game starts when the stack gets high. Shows the next shape, rows cleared and score. It needs no entities. At night it's drawn still.
+
+![Blocks screen](docs/blocks.png)
+
+```yaml
+    blocks:
+      blocks:
+        seed: 0          # optional: a different number gives a different run
+      frame_rate: 5
+      dwell: 15
+```
+
+### Surf screen
+
+A surfer riding a breaking wave, seen side-on: paddling in, popping up, carving up and down the face, then a kick-out or a wipeout. It needs no entities. At night it's drawn still.
+
+![Surf screen](docs/surf.png)
+
+The three wave styles (barrel, rolling, storm):
+
+![Surf wave styles](docs/surf-styles.png)
+
+```yaml
+    surf:
+      surf:
+        wave_style: barrel   # barrel (default), rolling or storm
+        wave_size: 1.0       # 0.6 to 1.4
+        sky: auto            # auto, day, sunset, night or storm (time_of_day also works)
+        surfer: auto         # auto, sandy, dark, red or silver
+        wetsuit: auto        # auto, a colour name, "#rrggbb" or [r, g, b]
+        board: auto          # as wetsuit
+        wipeouts: 0.35       # share of rides ending in a wipeout (0.6 for storm)
+        ride_seconds: 22     # length of one ride (minimum 12)
+        seed: 0
+      frame_rate: 5
+      dwell: 15
+```
+
+### Quest screen
+
+An auto-playing top-down adventure: Pip the lantern-mage crosses one-screen rooms (meadow, shore, vault), zaps crabs, bats, wisps and beetles with a staff, picks up coins, gems, potions and keys, and the screen scrolls to the next room. Shows energy crystals, the key and coins. It needs no entities. At night it's drawn still.
+
+![Quest screen](docs/quest.png)
+
+```yaml
+    quest:
+      quest:
+        seed: 0          # optional: a different number gives a different run
+      frame_rate: 5
+      dwell: 15
+```
+
+### Kart screen
+
+An auto-playing kart race on a tilted track running to the horizon: six animal drivers race three laps of a circuit built from the seed, with striped kerbs, trees, spark crystals, countdown lights and a finishing panel. Shows position and lap. It needs no entities. At night it's drawn still.
+
+![Kart screen](docs/kart.png)
+
+```yaml
+    kart:
+      kart:
+        seed: 0          # optional: a different number gives a different run
+      frame_rate: 5
+      dwell: 15
+```
+
+### Duel screen
+
+Two contenders, red and blue, battle with padded sticks on podiums in a lit TV-studio arena (spotlights, crowd, camera flashes) until one falls onto the crash mat and the winner celebrates; a scoreboard counts bouts. It needs no entities. At night it's drawn still.
+
+![Duel screen](docs/duel.png)
+
+```yaml
+    duel:
+      duel:
+        seed: 0          # optional: a different number gives a different run
+      frame_rate: 5
+      dwell: 15
+```
+
 ### Conditional and priority screens
 
 Any screen can take:
