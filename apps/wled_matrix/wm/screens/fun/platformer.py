@@ -18,35 +18,75 @@ from bisect import bisect_right
 
 from ...utils.canvas import Canvas
 
-SPEED = 22.0          # px/s the fox runs at (and the world scrolls)
-GRAVITY = 180.0       # px/s2: sets how high a jump of a given length goes
+SPEED = 22.0  # px/s the fox runs at (and the world scrolls)
+GRAVITY = 180.0  # px/s2: sets how high a jump of a given length goes
 STAGE_SECS = 60.0
 STAGE_LEN = int(SPEED * STAGE_SECS)
-PAD = 40              # world columns kept before x=0
+PAD = 40  # world columns kept before x=0
 WORLD = STAGE_LEN + 120
-GROUND = 52           # y of the top of the ground at its lowest level
-HERO_X = 20           # screen x of the fox's middle
+GROUND = 52  # y of the top of the ground at its lowest level
+HERO_X = 20  # screen x of the fox's middle
 FLAG_X = STAGE_LEN - 26
 INK = (25, 15, 40)
 
 # name: sky top, sky bottom, mountains, snow cap, hills (2), grass (2), dirt (2), plank (2), cloud, slime
 THEMES = [
-    {"name": "meadow", "sky": ((30, 120, 255), (140, 215, 255)), "mount": (95, 115, 215), "cap": (240, 245, 255),
-     "hill": ((40, 185, 95), (25, 150, 80)), "grass": ((110, 255, 50), (30, 180, 40)),
-     "dirt": ((200, 115, 40), (140, 75, 25)), "plank": ((255, 215, 60), (190, 120, 20)), "cloud": (255, 255, 255),
-     "slime": (255, 50, 200), "orb": ((255, 245, 120), (255, 255, 220)), "stars": False},
-    {"name": "sunset", "sky": ((70, 30, 150), (255, 130, 70)), "mount": (130, 45, 130), "cap": (255, 170, 150),
-     "hill": ((95, 40, 110), (70, 28, 90)), "grass": ((255, 215, 40), (220, 120, 20)),
-     "dirt": ((150, 60, 50), (100, 35, 40)), "plank": ((120, 240, 255), (30, 130, 190)), "cloud": (255, 180, 170),
-     "slime": (60, 255, 120), "orb": ((255, 230, 90), (255, 250, 200)), "stars": False},
-    {"name": "moonlight", "sky": ((6, 8, 45), (35, 45, 125)), "mount": (45, 55, 135), "cap": (150, 170, 255),
-     "hill": ((18, 75, 105), (12, 55, 85)), "grass": ((50, 240, 190), (20, 140, 130)),
-     "dirt": ((120, 70, 175), (80, 40, 125)), "plank": ((255, 170, 60), (170, 90, 20)), "cloud": (70, 85, 170),
-     "slime": (255, 70, 110), "orb": ((235, 240, 255), (255, 255, 255)), "stars": True},
-    {"name": "snow", "sky": ((60, 150, 255), (200, 235, 255)), "mount": (150, 185, 250), "cap": (255, 255, 255),
-     "hill": ((120, 175, 245), (95, 150, 230)), "grass": ((255, 255, 255), (170, 215, 255)),
-     "dirt": ((70, 110, 215), (45, 75, 165)), "plank": ((255, 120, 60), (170, 60, 30)), "cloud": (255, 255, 255),
-     "slime": (255, 60, 190), "orb": ((255, 245, 150), (255, 255, 230)), "stars": False},
+    {
+        "name": "meadow",
+        "sky": ((30, 120, 255), (140, 215, 255)),
+        "mount": (95, 115, 215),
+        "cap": (240, 245, 255),
+        "hill": ((40, 185, 95), (25, 150, 80)),
+        "grass": ((110, 255, 50), (30, 180, 40)),
+        "dirt": ((200, 115, 40), (140, 75, 25)),
+        "plank": ((255, 215, 60), (190, 120, 20)),
+        "cloud": (255, 255, 255),
+        "slime": (255, 50, 200),
+        "orb": ((255, 245, 120), (255, 255, 220)),
+        "stars": False,
+    },
+    {
+        "name": "sunset",
+        "sky": ((70, 30, 150), (255, 130, 70)),
+        "mount": (130, 45, 130),
+        "cap": (255, 170, 150),
+        "hill": ((95, 40, 110), (70, 28, 90)),
+        "grass": ((255, 215, 40), (220, 120, 20)),
+        "dirt": ((150, 60, 50), (100, 35, 40)),
+        "plank": ((120, 240, 255), (30, 130, 190)),
+        "cloud": (255, 180, 170),
+        "slime": (60, 255, 120),
+        "orb": ((255, 230, 90), (255, 250, 200)),
+        "stars": False,
+    },
+    {
+        "name": "moonlight",
+        "sky": ((6, 8, 45), (35, 45, 125)),
+        "mount": (45, 55, 135),
+        "cap": (150, 170, 255),
+        "hill": ((18, 75, 105), (12, 55, 85)),
+        "grass": ((50, 240, 190), (20, 140, 130)),
+        "dirt": ((120, 70, 175), (80, 40, 125)),
+        "plank": ((255, 170, 60), (170, 90, 20)),
+        "cloud": (70, 85, 170),
+        "slime": (255, 70, 110),
+        "orb": ((235, 240, 255), (255, 255, 255)),
+        "stars": True,
+    },
+    {
+        "name": "snow",
+        "sky": ((60, 150, 255), (200, 235, 255)),
+        "mount": (150, 185, 250),
+        "cap": (255, 255, 255),
+        "hill": ((120, 175, 245), (95, 150, 230)),
+        "grass": ((255, 255, 255), (170, 215, 255)),
+        "dirt": ((70, 110, 215), (45, 75, 165)),
+        "plank": ((255, 120, 60), (170, 60, 30)),
+        "cloud": (255, 255, 255),
+        "slime": (255, 60, 190),
+        "orb": ((255, 245, 150), (255, 255, 230)),
+        "stars": False,
+    },
 ]
 NIGHT_THEME = 2
 
@@ -61,7 +101,7 @@ FOX_BODY = [
     ".ttooooo..",
     "..oooowd..",
 ]
-FOX_BODY_AIR = [                                      # tail streaming out behind
+FOX_BODY_AIR = [  # tail streaming out behind
     "......o.o.",
     "......ooo.",
     ".....ookoo",
@@ -78,8 +118,15 @@ FOX_LEGS = [
 ]
 FOX_LEGS_UP = [".odd..odd.", ".........."]
 FOX_LEGS_DOWN = ["..od..od..", "..o...o..."]
-FOX = {"o": (255, 130, 10), "d": (200, 75, 0), "w": (255, 240, 200), "k": (20, 10, 30), "s": (190, 70, 255),
-       "t": (255, 130, 10), "c": (255, 240, 200)}
+FOX = {
+    "o": (255, 130, 10),
+    "d": (200, 75, 0),
+    "w": (255, 240, 200),
+    "k": (20, 10, 30),
+    "s": (190, 70, 255),
+    "t": (255, 130, 10),
+    "c": (255, 240, 200),
+}
 
 SLIME = [
     ["..mmm..", ".mmmmm.", "mwkmwkm", "mmmmmmm", "nmmmmmn"],
@@ -100,11 +147,16 @@ STAR_COL = (255, 235, 30)
 CLOUD = ["...www....", ".wwwwwww..", "wwwwwwwwww", ".sssssss.."]
 
 DIGITS = {
-    "0": ["111", "101", "101", "101", "111"], "1": ["010", "110", "010", "010", "111"],
-    "2": ["111", "001", "111", "100", "111"], "3": ["111", "001", "111", "001", "111"],
-    "4": ["101", "101", "111", "001", "001"], "5": ["111", "100", "111", "001", "111"],
-    "6": ["111", "100", "111", "101", "111"], "7": ["111", "001", "010", "010", "010"],
-    "8": ["111", "101", "111", "101", "111"], "9": ["111", "101", "111", "001", "111"],
+    "0": ["111", "101", "101", "101", "111"],
+    "1": ["010", "110", "010", "010", "111"],
+    "2": ["111", "001", "111", "100", "111"],
+    "3": ["111", "001", "111", "001", "111"],
+    "4": ["101", "101", "111", "001", "001"],
+    "5": ["111", "100", "111", "001", "111"],
+    "6": ["111", "100", "111", "101", "111"],
+    "7": ["111", "001", "010", "010", "010"],
+    "8": ["111", "101", "111", "101", "111"],
+    "9": ["111", "101", "111", "001", "111"],
 }
 
 
@@ -152,7 +204,7 @@ class Stage:
     def __init__(self, seed, number):
         self.number = number
         self.theme = THEMES[number % len(THEMES)]
-        self.top = [GROUND] * WORLD                   # y of the top of the ground per world column, None = a gap
+        self.top = [GROUND] * WORLD  # y of the top of the ground per world column, None = a gap
         self.pieces, self.items, self.slimes, self.brambles, self.buzzers, self.planks = [], [], [], [], [], []
         self.px, self.py = -PAD, GROUND
         levels, gaps = [(-PAD, GROUND)], []
@@ -161,8 +213,23 @@ class Stage:
         while x < STAGE_LEN - 110:
             i += 1
             h = self.py
-            kind = ("gap", "gap", "gap", "slime", "slime", "bramble", "bramble", "plank", "plank", "step", "step",
-                    "gems", "gems", "buzzer", "star")[int(r(i, "kind") * 15)]
+            kind = (
+                "gap",
+                "gap",
+                "gap",
+                "slime",
+                "slime",
+                "bramble",
+                "bramble",
+                "plank",
+                "plank",
+                "step",
+                "step",
+                "gems",
+                "gems",
+                "buzzer",
+                "star",
+            )[int(r(i, "kind") * 15)]
             if kind == last or (kind == "plank" and h < GROUND - 5):
                 kind = "gems" if last != "gems" else "gap"
             last = kind
@@ -171,7 +238,7 @@ class Stage:
                 for k in range(n):
                     self.item(x + 4 + 6 * k, h - 6, "gem")
                 x += 6 * n + 4
-            elif kind == "gap":                       # a gap, sometimes with the far side higher or lower
+            elif kind == "gap":  # a gap, sometimes with the far side higher or lower
                 w = 9 + int(r(i, "w") * 6)
                 dh = (-5, 0, 0, 5)[int(r(i, "dh") * 4)]
                 if not GROUND - 10 <= h + dh <= GROUND:
@@ -188,7 +255,7 @@ class Stage:
                 levels.append((x + 7, h + dh))
                 self.jump(x, x + 13, h + dh)
                 x += 13 + 5
-            elif kind == "slime":                     # jump onto it, bounce off
+            elif kind == "slime":  # jump onto it, bounce off
                 xe = x + 14
                 self.jump(x, xe, h - 3)
                 self.jump(xe, xe + 13, h)
@@ -201,7 +268,7 @@ class Stage:
                 self.jump(x, x + 16, h)
                 self.item(x + 8, int(self.path(x + 8)[0]) - 6, "gem")
                 x += 16 + 5
-            elif kind == "plank":                     # up onto a floating plank, along it, and down again
+            elif kind == "plank":  # up onto a floating plank, along it, and down again
                 length = 18 + int(r(i, "len") * 14)
                 a, b = x + 13, x + 13 + length
                 self.planks.append((a, b, h - 11))
@@ -215,12 +282,12 @@ class Stage:
                     self.item(gx, h - 17, "gem")
                 self.jump(b - 2, b + 10, h)
                 x = b + 10 + 5
-            elif kind == "buzzer":                    # it bobs up just as the fox runs under
+            elif kind == "buzzer":  # it bobs up just as the fox runs under
                 self.buzzers.append((x + 11, h))
                 self.item(x + 5, h - 6, "gem")
                 self.item(x + 17, h - 6, "gem")
                 x += 24
-            else:                                     # a big jump for a star
+            else:  # a big jump for a star
                 self.jump(x, x + 18, h)
                 self.item(x + 9, int(self.path(x + 9)[0]) - 7, "star")
                 x += 18 + 5
@@ -259,7 +326,7 @@ class Stage:
 
     def path(self, x, pieces=None):
         """(y of the surface under the fox's feet, or of his feet in the air; -1 rising, 1 falling, 0 running)."""
-        if pieces is None:                            # while building: the newest piece
+        if pieces is None:  # while building: the newest piece
             x0, x1, y0, y1, rise = self.pieces[-1]
         else:
             x0, x1, y0, y1, rise = self.pieces[max(0, bisect_right(self.starts, x) - 1)]
@@ -286,28 +353,28 @@ def draw_backdrop(c, th, cam, t, width, height):
     px = c.px
     top, bottom = th["sky"]
     for y in range(height):
-        px[y * width:(y + 1) * width] = [mix(top, bottom, min(1.0, y / 44.0))] * width
+        px[y * width : (y + 1) * width] = [mix(top, bottom, min(1.0, y / 44.0))] * width
     if th["stars"]:
         for i in range(26):
             x, y = int(rand("star", i, "x") * width), 8 + int(rand("star", i, "y") * 26)
             k = 0.55 + 0.45 * math.sin(t * (1 + rand("star", i, "f") * 2) + i)
             c.put(x, y, scale((230, 235, 255), k))
-    ox, oy = 50, 15                                   # sun or moon
+    ox, oy = 50, 15  # sun or moon
     for dy in range(-4, 5):
         for dx in range(-4, 5):
             d = dx * dx + dy * dy
             if d <= 18:
                 c.put(ox + dx, oy + dy, th["orb"][1] if d <= 6 else th["orb"][0])
-    if th["stars"]:                                   # bite out of the moon
+    if th["stars"]:  # bite out of the moon
         for dy in range(-3, 2):
             for dx in range(0, 4):
                 if (dx - 2) ** 2 + (dy + 1) ** 2 <= 5:
                     c.put(ox + dx, oy + dy, mix(top, bottom, (oy + dy) / 44.0))
-    for i in range(4):                                # clouds, drifting slowly
+    for i in range(4):  # clouds, drifting slowly
         cx = int((rand("cloud", i, "x") * 110 + i * 27 - cam * 0.06 - t * 1.2) % 110) - 16
         cy = 9 + int(rand("cloud", i, "y") * 14)
         draw_sprite(c, CLOUD, {"w": th["cloud"], "s": scale(th["cloud"], 0.78)}, cx, cy)
-    for sx in range(width):                           # far mountains, then nearer hills
+    for sx in range(width):  # far mountains, then nearer hills
         wx = sx + cam * 0.12
         m = 15 * tri(wx / 46.0) + 7 * tri(wx / 19.0 + 0.3)
         y0 = int(44 - m)
@@ -326,10 +393,11 @@ def draw_ground(c, st, th, cam, t, width, height):
     for sx in range(width):
         wx = sx + cam
         g = st.top[wx + PAD]
-        if g is None:                                 # a gap: water at the bottom
+        if g is None:  # a gap: water at the bottom
             for y in range(height - 5, height):
-                px[y * width + sx] = (30, 90, 255) if y > height - 5 else (
-                    (220, 240, 255) if (wx + ripple) % 5 < 2 else (90, 170, 255))
+                px[y * width + sx] = (
+                    (30, 90, 255) if y > height - 5 else ((220, 240, 255) if (wx + ripple) % 5 < 2 else (90, 170, 255))
+                )
             continue
         edge = st.top[wx + PAD - 1] != g or st.top[wx + PAD + 1] != g
         for y in range(g, height):
@@ -343,7 +411,7 @@ def draw_ground(c, st, th, cam, t, width, height):
             else:
                 col = dirt[0]
             px[y * width + sx] = col
-    for a, b, y in st.planks:                         # floating planks
+    for a, b, y in st.planks:  # floating planks
         if b - cam < 0 or a - cam >= width:
             continue
         for wx in range(a, b):
@@ -370,19 +438,19 @@ def draw_decor(c, st, th, cam, width, seed):
             continue
         what = rand(seed, "decor", st.number, cell)
         sx = wx - cam
-        if what < 0.16:                               # a small round tree
+        if what < 0.16:  # a small round tree
             for k in range(1, 6):
                 c.put(sx, g - k, th["dirt"][1])
             for dy in range(-3, 3):
                 for dx in range(-3, 4):
                     if dx * dx + dy * dy * 1.6 <= 9.5:
                         c.put(sx + dx, g - 8 + dy, th["grass"][1] if dy > 0 or dx > 1 else th["grass"][0])
-        elif what < 0.36:                             # a bush
+        elif what < 0.36:  # a bush
             for dx in range(-2, 3):
                 c.put(sx + dx, g - 1, th["grass"][1])
             for dx in range(-1, 2):
                 c.put(sx + dx, g - 2, th["grass"][0] if dx < 1 else th["grass"][1])
-        elif what < 0.6:                              # a flower
+        elif what < 0.6:  # a flower
             c.put(sx, g - 1, th["grass"][1])
             c.put(sx, g - 2, ((255, 90, 170), (255, 255, 255), (255, 200, 0))[int(what * 100) % 3])
 
@@ -443,11 +511,14 @@ def render_platformer(cfg, width=64, height=64, t=0.0, night=False):
         for dx in range(1, 7):
             wave = int(round(math.sin(t * 6 + dx * 0.9) * (dx / 6.0)))
             for dy in range(4 - (dx + 1) // 3 * 0 if dx < 5 else 2):
-                c.put(fx + dx, fy - 14 + dy + wave + (1 if dx >= 5 else 0),
-                      (255, 225, 30) if won else ((255, 50, 60) if (dx + dy) % 2 else (255, 255, 255)))
+                c.put(
+                    fx + dx,
+                    fy - 14 + dy + wave + (1 if dx >= 5 else 0),
+                    (255, 225, 30) if won else ((255, 50, 60) if (dx + dy) % 2 else (255, 255, 255)),
+                )
 
     # Things to collect: gone once the fox has reached them, with a sparkle for a moment after.
-    for x, y, kind, n in st.items[bisect_right(st.item_x, cam - 6):bisect_right(st.item_x, cam + width + 6)]:
+    for x, y, kind, n in st.items[bisect_right(st.item_x, cam - 6) : bisect_right(st.item_x, cam + width + 6)]:
         if kind == "stomp":
             continue
         sx = x - cam
@@ -455,8 +526,9 @@ def render_platformer(cfg, width=64, height=64, t=0.0, night=False):
         if x > hx:
             bob = int(round(math.sin(t * 4 + x * 0.5) * 0.6))
             if kind == "star":
-                draw_sprite(c, STAR, {"x": INK, "g": col, "w": (255, 255, 255) if tick % 2 else col},
-                            sx - 3, y - 3 + bob)
+                draw_sprite(
+                    c, STAR, {"x": INK, "g": col, "w": (255, 255, 255) if tick % 2 else col}, sx - 3, y - 3 + bob
+                )
             else:
                 draw_gem(c, sx, y + bob, col, tick + n)
         else:
@@ -489,7 +561,7 @@ def render_platformer(cfg, width=64, height=64, t=0.0, night=False):
                 draw_sprite(c, SLIME[int(t * 3) % 2], slime, sx, g - 5)
             elif dt < 0.3:
                 draw_sprite(c, SLIME_FLAT, slime, x - cam - 4, g - 2)
-            elif dt < 0.6:                            # a puff where it was
+            elif dt < 0.6:  # a puff where it was
                 d = 2 + int((dt - 0.3) * 14)
                 for dx, dy in ((-d, -1), (d, -1), (-d + 1, -d), (d - 1, -d), (0, -d - 1)):
                     c.put(x - cam + dx, g - 1 + dy, (255, 255, 255))
@@ -504,10 +576,12 @@ def render_platformer(cfg, width=64, height=64, t=0.0, night=False):
     else:
         rows = FOX_BODY + FOX_LEGS[int(hx / 3.0) % 4]
     draw_sprite(c, rows, FOX, HERO_X - 5, feet - 9)
-    i = max(0, bisect_right(st.starts, hx) - 1)       # dust where he took off or landed
+    i = max(0, bisect_right(st.starts, hx) - 1)  # dust where he took off or landed
     x0, x1, y0, y1, rise = st.pieces[i]
-    for wx, gy, on in ((x0, y0, True), (st.pieces[i - 1][0] if i else x0, st.pieces[i - 1][2] if i else y0,
-                                        bool(i) and st.pieces[i - 1][4] == 0)):
+    for wx, gy, on in (
+        (x0, y0, True),
+        (st.pieces[i - 1][0] if i else x0, st.pieces[i - 1][2] if i else y0, bool(i) and st.pieces[i - 1][4] == 0),
+    ):
         age = (hx - wx) / SPEED
         if on and 0 <= age < 0.3 and (rise or (i and st.pieces[i - 1][4])) and wx > 0:
             d = 1 + int(age * 12)
@@ -533,7 +607,7 @@ def render_platformer(cfg, width=64, height=64, t=0.0, night=False):
     for dx, dy in ((2, 1), (3, 1), (4, 2), (2, 2), (3, 2), (2, 3), (3, 3)):
         c.put(b + dx, dy, (255, 50, 60))
 
-    k = 1.0 if night else min(1.0, into / 0.5, (STAGE_SECS - into) / 0.5)   # fade between stages
+    k = 1.0 if night else min(1.0, into / 0.5, (STAGE_SECS - into) / 0.5)  # fade between stages
     if k < 1.0:
         c.px = [scale(p, k) for p in c.px]
     return c.px

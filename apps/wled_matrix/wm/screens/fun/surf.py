@@ -34,32 +34,78 @@ STYLES = {
     "rolling": {"height": 22, "curl": 13, "lip": 0, "power": 1.1, "tempo": 1.5, "reach": 0.28},
     "storm": {"height": 35, "curl": 17, "lip": 5, "power": 1.3, "tempo": 3.3, "reach": 0.38},
 }
-BASE = 55             # y of the trough in front of the wave
+BASE = 55  # y of the trough in front of the wave
 HORIZON = 24
 
 SKIES = {
-    "day": {"sky": ((20, 105, 255), (150, 220, 255)), "far": (0, 75, 200), "lit": (130, 255, 215),
-            "mid": (0, 185, 200), "deep": (0, 85, 185), "fore": (0, 60, 170), "glint": (90, 180, 255),
-            "foam": (255, 255, 255), "shade": (165, 220, 255), "tube": (0, 55, 105)},
-    "sunset": {"sky": ((55, 20, 120), (255, 125, 45)), "far": (125, 40, 110), "lit": (255, 205, 110),
-               "mid": (235, 90, 105), "deep": (95, 30, 135), "fore": (65, 20, 105), "glint": (255, 160, 80),
-               "foam": (255, 238, 215), "shade": (255, 160, 150), "tube": (60, 15, 80)},
-    "night": {"sky": ((3, 5, 30), (15, 28, 85)), "far": (5, 20, 75), "lit": (120, 225, 255),
-              "mid": (20, 90, 195), "deep": (8, 30, 105), "fore": (5, 15, 65), "glint": (90, 150, 255),
-              "foam": (220, 235, 255), "shade": (105, 140, 235), "tube": (3, 10, 45)},
-    "storm": {"sky": ((22, 26, 40), (75, 85, 100)), "far": (20, 52, 62), "lit": (160, 215, 180),
-              "mid": (40, 118, 110), "deep": (15, 58, 74), "fore": (10, 42, 58), "glint": (125, 165, 165),
-              "foam": (238, 242, 238), "shade": (140, 168, 175), "tube": (8, 30, 40)},
+    "day": {
+        "sky": ((20, 105, 255), (150, 220, 255)),
+        "far": (0, 75, 200),
+        "lit": (130, 255, 215),
+        "mid": (0, 185, 200),
+        "deep": (0, 85, 185),
+        "fore": (0, 60, 170),
+        "glint": (90, 180, 255),
+        "foam": (255, 255, 255),
+        "shade": (165, 220, 255),
+        "tube": (0, 55, 105),
+    },
+    "sunset": {
+        "sky": ((55, 20, 120), (255, 125, 45)),
+        "far": (125, 40, 110),
+        "lit": (255, 205, 110),
+        "mid": (235, 90, 105),
+        "deep": (95, 30, 135),
+        "fore": (65, 20, 105),
+        "glint": (255, 160, 80),
+        "foam": (255, 238, 215),
+        "shade": (255, 160, 150),
+        "tube": (60, 15, 80),
+    },
+    "night": {
+        "sky": ((3, 5, 30), (15, 28, 85)),
+        "far": (5, 20, 75),
+        "lit": (120, 225, 255),
+        "mid": (20, 90, 195),
+        "deep": (8, 30, 105),
+        "fore": (5, 15, 65),
+        "glint": (90, 150, 255),
+        "foam": (220, 235, 255),
+        "shade": (105, 140, 235),
+        "tube": (3, 10, 45),
+    },
+    "storm": {
+        "sky": ((22, 26, 40), (75, 85, 100)),
+        "far": (20, 52, 62),
+        "lit": (160, 215, 180),
+        "mid": (40, 118, 110),
+        "deep": (15, 58, 74),
+        "fore": (10, 42, 58),
+        "glint": (125, 165, 165),
+        "foam": (238, 242, 238),
+        "shade": (140, 168, 175),
+        "tube": (8, 30, 40),
+    },
 }
-SURFERS = {                                           # hair, skin
+SURFERS = {  # hair, skin
     "sandy": ((255, 225, 90), (255, 190, 140)),
     "dark": ((45, 28, 22), (165, 105, 65)),
     "red": ((255, 95, 30), (255, 208, 175)),
     "silver": ((225, 230, 240), (225, 160, 120)),
 }
-COLOURS = {"red": (255, 40, 40), "orange": (255, 140, 0), "yellow": (255, 235, 0), "lime": (160, 255, 30),
-           "green": (30, 220, 70), "cyan": (0, 230, 255), "blue": (40, 90, 255), "purple": (170, 70, 255),
-           "pink": (255, 60, 170), "white": (255, 255, 255), "black": (25, 25, 35)}
+COLOURS = {
+    "red": (255, 40, 40),
+    "orange": (255, 140, 0),
+    "yellow": (255, 235, 0),
+    "lime": (160, 255, 30),
+    "green": (30, 220, 70),
+    "cyan": (0, 230, 255),
+    "blue": (40, 90, 255),
+    "purple": (170, 70, 255),
+    "pink": (255, 60, 170),
+    "white": (255, 255, 255),
+    "black": (25, 25, 35),
+}
 WETSUITS = ("pink", "red", "black", "lime", "purple", "blue")
 BOARDS = ("yellow", "white", "orange", "pink", "lime", "red")
 
@@ -117,7 +163,7 @@ def colour(value, fallback):
             return COLOURS[v]
         if len(v) == 7 and v[0] == "#":
             try:
-                return tuple(int(v[i:i + 2], 16) for i in (1, 3, 5))
+                return tuple(int(v[i : i + 2], 16) for i in (1, 3, 5))
             except ValueError:
                 pass
     return fallback
@@ -146,7 +192,7 @@ class Wave:
         self.top = []
         span = float(width + 8 - curl - lip)
         for x in range(width + 16):
-            if x < curl:                              # the broken part: a churning pile of whitewater
+            if x < curl:  # the broken part: a churning pile of whitewater
                 y = BASE - h * (0.58 + 0.42 * (x / float(curl)) ** 2) + 1.6 * math.sin(x * 0.9 - t * 5.0) + 1
             elif x <= curl + lip:
                 y = BASE - h + 0.6 * math.sin((x - curl) * 0.5 + t * 3)
@@ -159,7 +205,7 @@ class Wave:
                 y += 0.6 * math.sin(x * 0.2 + t * 1.3)
             self.top.append(min(BASE - 1.0, y))
         self.tube = None
-        if lip >= 9:                                  # the hollow under the lip
+        if lip >= 9:  # the hollow under the lip
             self.tube = (curl + lip * 0.5, BASE - h * 0.47, lip * 0.7, h * 0.25)
 
     def y(self, x, f):
@@ -177,7 +223,7 @@ def draw_sky(c, sky, pal, t, width, flash):
         col = mix(top, bottom, y / float(HORIZON - 1))
         if flash:
             col = mix(col, (235, 240, 255), flash * 0.45)
-        px[y * width:(y + 1) * width] = [col] * width
+        px[y * width : (y + 1) * width] = [col] * width
     if sky == "day":
         for dy in range(-4, 5):
             for dx in range(-4, 5):
@@ -212,7 +258,7 @@ def draw_sky(c, sky, pal, t, width, flash):
             for dx in range(-4, 5):
                 if dx * dx + dy * dy <= 17 and (dx - 2) ** 2 + (dy + 1) ** 2 > 9:
                     c.put(50 + dx, 9 + dy, (240, 244, 255))
-    else:                                             # storm: heavy cloud banks
+    else:  # storm: heavy cloud banks
         for x in range(width):
             for band, (y0, amp, speed, col) in enumerate(((0, 4, 3.0, (14, 16, 26)), (6, 3, 1.8, (44, 50, 64)))):
                 depth = y0 + 4 + amp * math.sin((x + t * speed) * 0.19 + band) + 2 * math.sin((x + t * speed) * 0.47)
@@ -264,7 +310,7 @@ def render_surf(cfg, width=64, height=64, t=0.0, night=False):
     for x in range(width):
         ytop = int(round(top[x]))
         for y in range(HORIZON, height):
-            if y < ytop:                              # far sea behind the wave, with lines of swell
+            if y < ytop:  # far sea behind the wave, with lines of swell
                 col = far
                 if (y - HORIZON) % 4 == 1 and noise((x + drift // 4) // 5, y) < 110:
                     col = mix(far, glint, 0.55)
@@ -272,29 +318,29 @@ def render_surf(cfg, width=64, height=64, t=0.0, night=False):
                     col = (255, 200, 90)
             elif y < BASE:
                 f = (y - ytop) / float(BASE - ytop)
-                if x < curl - 2 + f * (9 if not wave.tube else 3):   # whitewater, spilling forward at the foot
+                if x < curl - 2 + f * (9 if not wave.tube else 3):  # whitewater, spilling forward at the foot
                     n = noise((x + churn) // 2, (y + churn // 2) // 2, churn // 3)
                     col = foam if n > 90 else (shade if n > 25 else mix(shade, mid, 0.5))
                     if f > 0.8 and n < 120:
                         col = mix(shade, deep, 0.4)
                 else:
                     col = mix(lit, mid, f / 0.28) if f < 0.28 else mix(mid, deep, (f - 0.28) / 0.72)
-                    if (x + 2 * y + drift) % 9 == 0 and 0.08 < f < 0.9:   # water drawing up the face
+                    if (x + 2 * y + drift) % 9 == 0 and 0.08 < f < 0.9:  # water drawing up the face
                         col = mix(col, lit, 0.4)
-                    if y == ytop:                     # the feathering crest
+                    if y == ytop:  # the feathering crest
                         near = x - curl - lip
                         col = foam if near < 10 + 3 * math.sin(t * 2) or noise(x + drift, 7) < 60 else lit
                     elif y == ytop + 1 and x - curl - lip < 5:
                         col = shade
                     if style == "storm" and noise(x + drift, y, churn // 2) < 5:
-                        col = foam                    # blown foam
-            else:                                     # the flat water in front
+                        col = foam  # blown foam
+            else:  # the flat water in front
                 d = y - BASE
                 col = mix(deep, fore, min(1.0, d / 4.0))
                 if (x + drift + y * 5) % 14 < 4 and d % 3 == 1:
                     col = mix(col, glint, 0.6)
                 if x < curl + 6 - d and noise((x + churn) // 2, y, churn // 4) > 120:
-                    col = foam if noise(x, y, churn) > 100 else shade   # foam spreading out of the whitewater
+                    col = foam if noise(x, y, churn) > 100 else shade  # foam spreading out of the whitewater
                 if style == "storm" and noise((x + drift) // 2, y, churn // 3) < 16:
                     col = shade
             if flash and y >= ytop:
@@ -314,16 +360,19 @@ def render_surf(cfg, width=64, height=64, t=0.0, night=False):
                     c.put(x, y, foam if noise(x + churn, y) > 70 else shade)
                 elif e <= 1.3 and y < cy and x >= cx + rx * 0.75:
                     c.put(x, y, lit)
-        for k in range(5):                            # the curtain falling at the back of the tube
+        for k in range(5):  # the curtain falling at the back of the tube
             x = int(cx - rx) + k % 3
             y = int(cy - ry * 0.4) + (churn * 2 + k * 5) % max(1, int(ry * 1.3))
             c.put(x, y, foam)
-    for k in range(7 if style != "rolling" else 3):   # spray blowing back off the crest
+    for k in range(7 if style != "rolling" else 3):  # spray blowing back off the crest
         x = curl + int(rand("spray", k) * (lip + 8))
         age = (t * 1.6 + rand("spray", k, "p")) % 1.0
-        c.put(x - int(age * 6), int(top[max(0, min(width - 1, x))]) - 1 - int(age * (5 if style == "storm" else 3)),
-              foam if age < 0.6 else shade)
-    for k in range(4):                                # and thrown up by the whitewater
+        c.put(
+            x - int(age * 6),
+            int(top[max(0, min(width - 1, x))]) - 1 - int(age * (5 if style == "storm" else 3)),
+            foam if age < 0.6 else shade,
+        )
+    for k in range(4):  # and thrown up by the whitewater
         x = int(rand("splash", k) * max(1, curl - 2))
         age = (t * 1.3 + rand("splash", k, "p")) % 1.0
         c.put(x, int(top[x]) - int(4 * math.sin(age * math.pi)), foam)
@@ -345,7 +394,7 @@ def render_surf(cfg, width=64, height=64, t=0.0, night=False):
     s = STYLES[style]
     paddle, popup, ending = 4.0, 0.8, 3.0
     t_end = ride - ending
-    home = curl + lip + 16 + (4 if style == "rolling" else 0)       # where on the face the carving is centred
+    home = curl + lip + 16 + (4 if style == "rolling" else 0)  # where on the face the carving is centred
     start_x = min(width - 9, home + 9)
 
     def carve(tau):
@@ -354,7 +403,7 @@ def render_surf(cfg, width=64, height=64, t=0.0, night=False):
         f = 0.47 - s["reach"] * math.cos(ph) * (0.8 + 0.2 * math.sin(ph * 0.37 + r("p") * 6))
         x = home + 6.0 * math.sin(ph * 0.5 + 1.0) + 2.0 * math.sin(ph * 0.23)
         pose = CROUCH if math.sin(ph) > 0.55 else STAND
-        if wave.tube and r("tube") < 0.85:            # mid-ride, tuck into the tube for a few seconds
+        if wave.tube and r("tube") < 0.85:  # mid-ride, tuck into the tube for a few seconds
             t0 = paddle + popup + 3.0 + r("tube0") * max(0.5, t_end - paddle - popup - 8.5)
             b = smooth((tau - t0) / 0.8) * smooth((t0 + 4.2 - tau) / 0.8)
             cx, cy, rx, ry = wave.tube
@@ -364,7 +413,7 @@ def render_surf(cfg, width=64, height=64, t=0.0, night=False):
             if b > 0.4:
                 pose = CROUCH
         elif style == "rolling" and math.sin(ph * 0.31 + r("c") * 6) > 0.8:
-            pose = CHEER                              # cruising, arms up
+            pose = CHEER  # cruising, arms up
         drop = smooth((tau - paddle) / (popup + 0.9))  # dropping in from the top at the start
         x, f = start_x + (x - start_x) * drop, 0.06 + (f - 0.06) * drop
         if tau < paddle + popup:
@@ -380,30 +429,30 @@ def render_surf(cfg, width=64, height=64, t=0.0, night=False):
             bx, by = int(round(x + i)), int(round(y + i * slope))
             c.put(bx, by, board if abs(i) != 2 else scale(board, 0.6))
             if i == -length + 1:
-                c.put(bx, by + 1, (25, 25, 35))       # the fin
+                c.put(bx, by + 1, (25, 25, 35))  # the fin
 
     long_board = 6 if style == "rolling" else 5
-    if into < paddle:                                 # paddling in from the right, over the shoulder
+    if into < paddle:  # paddling in from the right, over the shoulder
         k = smooth(into / paddle)
         x = width + 8 + (start_x - width - 8) * k
         y = wave.y(x, 0.06) + 0.8 * math.sin(t * 3)
         draw_board(x, y, 0.0, long_board)
         draw_sprite(c, PRONE, body, int(round(x)), int(round(y)) - 1, direction=-1)
-        c.put(int(round(x)) + (1 if tick % 2 else -2), int(round(y)) + 1, skin)   # the paddling arm
+        c.put(int(round(x)) + (1 if tick % 2 else -2), int(round(y)) + 1, skin)  # the paddling arm
         c.put(int(round(x)) + 6, int(round(y)), foam)
     elif into < t_end or not wipeout:
         if into < t_end:
             x, y, pose = place(into)
             x2, y2, _ = place(into - 0.12)
-        else:                                         # kick out: up over the shoulder and away to the right
+        else:  # kick out: up over the shoulder and away to the right
             x0, f0, pose = carve(t_end)
             k = (into - t_end) / ending
             x = x0 + (width + 10 - x0) * k * k
             f = f0 + (-0.12 - f0) * smooth(k * 2.2)
             y = wave.y(x, f)
-            x2, y2 = x - 1, wave.y(x - 1, f0 + (-0.12 - f0) * smooth((k - 0.04) * 2.2))
+            y2 = wave.y(x - 1, f0 + (-0.12 - f0) * smooth((k - 0.04) * 2.2))
             pose = CHEER if k > 0.25 else pose
-        vy = (y - y2) / 0.12                          # px/s down the face
+        vy = (y - y2) / 0.12  # px/s down the face
         slope = max(-0.5, min(0.5, vy / 26.0))
         # The wake: where the board was, carried back along the face.
         if into < t_end:
@@ -412,7 +461,7 @@ def render_surf(cfg, width=64, height=64, t=0.0, night=False):
                 wx -= k * 1.5
                 if wx > curl + 1 and into - k * 0.09 > paddle + 0.3:
                     c.put(int(round(wx - 4)), int(round(wy)), foam if k < 8 else shade)
-        if into < t_end and wave.y(x, 0) > y - 5 and vy > -4:   # a fan of spray off a top turn
+        if into < t_end and wave.y(x, 0) > y - 5 and vy > -4:  # a fan of spray off a top turn
             for k in range(6):
                 a = (t * 2.5 + k * 0.17) % 1.0
                 c.put(int(x - 4 - a * 7 - k % 2), int(y - 1 - 7 * math.sin(a * math.pi) - k % 3), foam)
@@ -421,7 +470,7 @@ def render_surf(cfg, width=64, height=64, t=0.0, night=False):
         draw_sprite(c, pose, body, bx, by - 1, shear=-slope * 0.5)
         c.put(bx - long_board - 1, int(round(y - long_board * slope)), foam)
         c.put(bx - long_board - 2, int(round(y - long_board * slope)) - 1, foam)
-    else:                                             # wipeout: thrown off, the board flies, the foam takes them
+    else:  # wipeout: thrown off, the board flies, the foam takes them
         x0, y0, _ = place(t_end)
         k = into - t_end
         x = x0 - 14.0 * k
@@ -429,7 +478,7 @@ def render_surf(cfg, width=64, height=64, t=0.0, night=False):
         floor = wave.y(x, 0.85)
         if y < floor or k < 0.4:
             draw_sprite(c, TUMBLE[int(k * 9) % 4], body, int(round(x)), int(round(y)))
-        elif k < 2.4:                                 # a head bobbing in the foam, an arm up
+        elif k < 2.4:  # a head bobbing in the foam, an arm up
             hx, hy = int(round(x)), int(round(floor + math.sin(t * 5)))
             c.put(hx, hy, skin)
             c.put(hx, hy - 1, hair)
@@ -438,20 +487,23 @@ def render_surf(cfg, width=64, height=64, t=0.0, night=False):
                 c.put(hx - 2, hy - 2, skin)
             for dx in (-3, -2, 2, 3):
                 c.put(hx + dx, hy + 1, foam)
-        bx = x0 + 6.0 * k                             # the board spins up and comes down
+        bx = x0 + 6.0 * k  # the board spins up and comes down
         by = y0 - 26.0 * k + 22.0 * k * k
         if by < BASE + 2:
             a = k * 7.0
             for i in range(-long_board, long_board + 1):
-                c.put(int(round(bx + i * math.cos(a))), int(round(by + i * math.sin(a))),
-                      board if abs(i) != 2 else scale(board, 0.6))
-        if k < 0.9:                                   # the splash
+                c.put(
+                    int(round(bx + i * math.cos(a))),
+                    int(round(by + i * math.sin(a))),
+                    board if abs(i) != 2 else scale(board, 0.6),
+                )
+        if k < 0.9:  # the splash
             for i in range(10):
                 a = 3.5 + i * 0.26
                 d = 2 + k * 13
                 c.put(int(x0 + math.cos(a) * d * 0.8), int(y0 + math.sin(a) * d * 0.7 + 8 * k * k), foam)
 
-    if sky == "storm" or style == "storm":            # rain, slanting with the wind
+    if sky == "storm" or style == "storm":  # rain, slanting with the wind
         for i in range(34):
             x = int(rand("rain", i, "x") * (width + 20))
             y = (int(rand("rain", i, "y") * height) + int(t * (38 + 20 * rand("rain", i, "v")))) % height

@@ -52,7 +52,7 @@ class Quest(unittest.TestCase):
             self.assertEqual(nxt.entry, wq.Room.door(wq.OPPOSITE[room.exit_side], room.exit_at))
             pos = room.entry
             for start, end, kind, a, b, _ in room.segs:
-                self.assertEqual(a, pos)              # no teleporting
+                self.assertEqual(a, pos)  # no teleporting
                 if kind == "walk":
                     self.assertEqual(abs(a[0] - b[0]) + abs(a[1] - b[1]), 1)
                     self.assertNotIn(b, room.things)  # never through a tree or a pond

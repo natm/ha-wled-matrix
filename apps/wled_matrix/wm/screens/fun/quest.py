@@ -22,25 +22,43 @@ from bisect import bisect_right
 from ...utils.canvas import Canvas
 
 TILE, COLS, ROWS = 8, 8, 7
-TOP = 8               # the room is drawn below the bar
+TOP = 8  # the room is drawn below the bar
 QUEST_SECS = 240.0
-STEP = 0.3            # seconds to walk one tile
-ZAP = 0.8             # seconds per staff zap (the bolt flies 0.35-0.55 s in)
-PAN = 0.9             # seconds for the screen to scroll to the next room
+STEP = 0.3  # seconds to walk one tile
+ZAP = 0.8  # seconds per staff zap (the bolt flies 0.35-0.55 s in)
+PAN = 0.9  # seconds for the screen to scroll to the next room
 SIDES = {"E": (1, 0), "W": (-1, 0), "N": (0, -1), "S": (0, 1)}
 OPPOSITE = {"E": "W", "W": "E", "N": "S", "S": "N"}
 INK = (20, 12, 35)
 
 BIOMES = [
-    {"name": "meadow", "floor": ((120, 215, 80), (95, 190, 65)), "path": ((225, 185, 110), (200, 155, 85)),
-     "walls": ("tree",), "things": ("tree", "bush", "rock", "water", "bush"), "monsters": ("crab", "bat"),
-     "water": ((30, 110, 255), (130, 200, 255))},
-    {"name": "shore", "floor": ((245, 220, 135), (228, 196, 110)), "path": ((255, 240, 185), (240, 220, 150)),
-     "walls": ("palm", "rock"), "things": ("palm", "rock", "water", "water", "shell"), "monsters": ("crab", "beetle"),
-     "water": ((0, 190, 225), (170, 245, 255))},
-    {"name": "vault", "floor": ((66, 68, 96), (52, 54, 78)), "path": None,
-     "walls": ("brick",), "things": ("pillar", "lava", "lava", "crate"), "monsters": ("wisp", "beetle", "bat"),
-     "water": ((255, 90, 0), (255, 220, 40))},
+    {
+        "name": "meadow",
+        "floor": ((120, 215, 80), (95, 190, 65)),
+        "path": ((225, 185, 110), (200, 155, 85)),
+        "walls": ("tree",),
+        "things": ("tree", "bush", "rock", "water", "bush"),
+        "monsters": ("crab", "bat"),
+        "water": ((30, 110, 255), (130, 200, 255)),
+    },
+    {
+        "name": "shore",
+        "floor": ((245, 220, 135), (228, 196, 110)),
+        "path": ((255, 240, 185), (240, 220, 150)),
+        "walls": ("palm", "rock"),
+        "things": ("palm", "rock", "water", "water", "shell"),
+        "monsters": ("crab", "beetle"),
+        "water": ((0, 190, 225), (170, 245, 255)),
+    },
+    {
+        "name": "vault",
+        "floor": ((66, 68, 96), (52, 54, 78)),
+        "path": None,
+        "walls": ("brick",),
+        "things": ("pillar", "lava", "lava", "crate"),
+        "monsters": ("wisp", "beetle", "bat"),
+        "water": ((255, 90, 0), (255, 220, 40)),
+    },
 ]
 
 TILES = {
@@ -53,32 +71,77 @@ TILES = {
     "pillar": ["..aaaa..", ".aAAAAd.", ".aAhAAd.", "..AhAd..", "..AhAd..", ".aAhAAd.", ".aAAAAd.", "..dddd.."],
     "crate": ["........", ".tttttt.", ".tTTTTt.", ".tTttTt.", ".tTttTt.", ".tTTTTt.", ".tttttt.", "........"],
 }
-TILE_COLS = {"g": (20, 150, 60), "G": (15, 120, 50), "h": (90, 220, 90), "d": (8, 80, 45), "t": (120, 70, 30),
-             "T": (190, 125, 55), "r": (255, 60, 90), "a": (150, 155, 175), "A": (120, 125, 150),
-             "p": (255, 150, 190), "P": (255, 215, 225), "B": (125, 100, 165), "m": (58, 44, 92)}
+TILE_COLS = {
+    "g": (20, 150, 60),
+    "G": (15, 120, 50),
+    "h": (90, 220, 90),
+    "d": (8, 80, 45),
+    "t": (120, 70, 30),
+    "T": (190, 125, 55),
+    "r": (255, 60, 90),
+    "a": (150, 155, 175),
+    "A": (120, 125, 150),
+    "p": (255, 150, 190),
+    "P": (255, 215, 225),
+    "B": (125, 100, 165),
+    "m": (58, 44, 92),
+}
 VAULT_COLS = dict(TILE_COLS, a=(170, 160, 200), A=(135, 125, 175), h=(215, 205, 240), d=(70, 60, 110))
 
 # Pip, 7 x 8. p hat, y hat band, s skin, k eye, r robe, R robe shade, b boot.
 PIP = {
-    "S": [["...p...", "..ppp..", ".yyyyy.", ".sksks.", "..rrr..", ".rrrrr.", ".rRrRr.", "..b.b.."],
-          ["...p...", "..ppp..", ".yyyyy.", ".sksks.", "..rrr..", ".rrrrr.", ".rRrRr.", ".b...b."]],
-    "N": [["...p...", "..ppp..", ".yyyyy.", ".ppppp.", "..rrr..", ".rrrrr.", ".rRrRr.", "..b.b.."],
-          ["...p...", "..ppp..", ".yyyyy.", ".ppppp.", "..rrr..", ".rrrrr.", ".rRrRr.", ".b...b."]],
-    "E": [["...p...", "..ppp..", ".yyyyy.", "..pssk.", "..rrr..", "..rrrr.", "..rRr..", "..b.b.."],
-          ["...p...", "..ppp..", ".yyyyy.", "..pssk.", "..rrr..", "..rrrr.", "..rRr..", "...bb.."]],
+    "S": [
+        ["...p...", "..ppp..", ".yyyyy.", ".sksks.", "..rrr..", ".rrrrr.", ".rRrRr.", "..b.b.."],
+        ["...p...", "..ppp..", ".yyyyy.", ".sksks.", "..rrr..", ".rrrrr.", ".rRrRr.", ".b...b."],
+    ],
+    "N": [
+        ["...p...", "..ppp..", ".yyyyy.", ".ppppp.", "..rrr..", ".rrrrr.", ".rRrRr.", "..b.b.."],
+        ["...p...", "..ppp..", ".yyyyy.", ".ppppp.", "..rrr..", ".rrrrr.", ".rRrRr.", ".b...b."],
+    ],
+    "E": [
+        ["...p...", "..ppp..", ".yyyyy.", "..pssk.", "..rrr..", "..rrrr.", "..rRr..", "..b.b.."],
+        ["...p...", "..ppp..", ".yyyyy.", "..pssk.", "..rrr..", "..rrrr.", "..rRr..", "...bb.."],
+    ],
 }
-PIP_COLS = {"p": (175, 70, 255), "y": (255, 225, 40), "s": (255, 205, 160), "k": INK, "r": (40, 150, 255),
-            "R": (25, 95, 200), "b": (120, 60, 30)}
+PIP_COLS = {
+    "p": (175, 70, 255),
+    "y": (255, 225, 40),
+    "s": (255, 205, 160),
+    "k": INK,
+    "r": (40, 150, 255),
+    "R": (25, 95, 200),
+    "b": (120, 60, 30),
+}
 
 MONSTERS = {
-    "crab": ([["r.w.w.r", "r.k.k.r", ".rrrrr.", "rrrrrrr", ".r.r.r."], ["..w.w..", "r.k.k.r", "rrrrrrr", ".rrrrr.", "r..r..r"]],
-             {"r": (255, 50, 40), "w": (255, 255, 255), "k": INK}),
-    "bat": ([["p.....p", "pp.p.pp", "ppppppp", ".pwpwp.", "..ppp.."], [".......", "..p.p..", "ppppppp", "ppwpwpp", "p.ppp.p"]],
-            {"p": (215, 60, 255), "w": (255, 240, 0)}),
-    "wisp": ([["...c...", "..ccc..", ".cwcwc.", ".ccccc.", ".c.c.c."], ["..c....", "..ccc..", ".cwcwc.", ".ccccc.", "..c.c.."]],
-             {"c": (60, 255, 230), "w": (255, 255, 255)}),
-    "beetle": ([["k.....k", ".ggggg.", "ggygygg", "ggggggg", ".k.k.k."], [".k...k.", ".ggggg.", "ggygygg", "ggggggg", "k..k..k"]],
-               {"g": (150, 255, 30), "y": (255, 40, 40), "k": INK}),
+    "crab": (
+        [
+            ["r.w.w.r", "r.k.k.r", ".rrrrr.", "rrrrrrr", ".r.r.r."],
+            ["..w.w..", "r.k.k.r", "rrrrrrr", ".rrrrr.", "r..r..r"],
+        ],
+        {"r": (255, 50, 40), "w": (255, 255, 255), "k": INK},
+    ),
+    "bat": (
+        [
+            ["p.....p", "pp.p.pp", "ppppppp", ".pwpwp.", "..ppp.."],
+            [".......", "..p.p..", "ppppppp", "ppwpwpp", "p.ppp.p"],
+        ],
+        {"p": (215, 60, 255), "w": (255, 240, 0)},
+    ),
+    "wisp": (
+        [
+            ["...c...", "..ccc..", ".cwcwc.", ".ccccc.", ".c.c.c."],
+            ["..c....", "..ccc..", ".cwcwc.", ".ccccc.", "..c.c.."],
+        ],
+        {"c": (60, 255, 230), "w": (255, 255, 255)},
+    ),
+    "beetle": (
+        [
+            ["k.....k", ".ggggg.", "ggygygg", "ggggggg", ".k.k.k."],
+            [".k...k.", ".ggggg.", "ggygygg", "ggggggg", "k..k..k"],
+        ],
+        {"g": (150, 255, 30), "y": (255, 40, 40), "k": INK},
+    ),
 }
 PICKUPS = {
     "coin": (["..x..", ".xgx.", "xgwgx", ".xgx.", "..x.."], {"g": (255, 215, 0), "w": (255, 255, 200), "x": INK}),
@@ -89,11 +152,16 @@ PICKUPS = {
 VALUE = {"coin": 1, "gem": 5}
 
 DIGITS = {
-    "0": ["111", "101", "101", "101", "111"], "1": ["010", "110", "010", "010", "111"],
-    "2": ["111", "001", "111", "100", "111"], "3": ["111", "001", "111", "001", "111"],
-    "4": ["101", "101", "111", "001", "001"], "5": ["111", "100", "111", "001", "111"],
-    "6": ["111", "100", "111", "101", "111"], "7": ["111", "001", "010", "010", "010"],
-    "8": ["111", "101", "111", "101", "111"], "9": ["111", "101", "111", "001", "111"],
+    "0": ["111", "101", "101", "101", "111"],
+    "1": ["010", "110", "010", "010", "111"],
+    "2": ["111", "001", "111", "100", "111"],
+    "3": ["111", "001", "111", "001", "111"],
+    "4": ["101", "101", "111", "001", "001"],
+    "5": ["111", "100", "111", "001", "111"],
+    "6": ["111", "100", "111", "101", "111"],
+    "7": ["111", "001", "010", "010", "010"],
+    "8": ["111", "101", "111", "101", "111"],
+    "9": ["111", "101", "111", "001", "111"],
 }
 
 
@@ -169,15 +237,23 @@ class Room:
 
         # Obstacles, then monsters and things to pick up on what's left; drop obstacles until all can be reached.
         things = {}
-        for tl in order[:4 + int(r("things") * 4)]:
+        for tl in order[: 4 + int(r("things") * 4)]:
             things[tl] = self.biome["things"][int(r("thing", tl) * len(self.biome["things"]))]
-        spots = order[len(things):]
+        spots = order[len(things) :]
         self.locked = r("locked") < (0.5 if self.biome["name"] == "vault" else 0.25)
         n_mon = 1 + int(r("monsters") * 2.4)
-        self.monsters = [{"tile": tl, "kind": self.biome["monsters"][int(r("mk", tl) * len(self.biome["monsters"]))],
-                          "hp": 1 + int(r("hp", tl) * 2), "fight": 1e9, "dead": 1e9, "hits": []}
-                         for tl in spots[:n_mon]]
-        kinds = ["coin", "coin", "gem", "coin"][:2 + int(r("loot") * 3)]
+        self.monsters = [
+            {
+                "tile": tl,
+                "kind": self.biome["monsters"][int(r("mk", tl) * len(self.biome["monsters"]))],
+                "hp": 1 + int(r("hp", tl) * 2),
+                "fight": 1e9,
+                "dead": 1e9,
+                "hits": [],
+            }
+            for tl in spots[:n_mon]
+        ]
+        kinds = ["coin", "coin", "gem", "coin"][: 2 + int(r("loot") * 3)]
         if self.locked:
             kinds.append("key")
         if energy < 5 and r("potion") < 0.7:
@@ -229,7 +305,7 @@ class Room:
                 self.hud.append((now, coins, energy, key))
             else:
                 obj["fight"] = now
-                if energy > 2 and r("hurt", obj["tile"]) < 0.3:   # it gets a nip in first
+                if energy > 2 and r("hurt", obj["tile"]) < 0.3:  # it gets a nip in first
                     energy -= 1
                     self.hud.append((now + 0.25, coins, energy, key))
                 for _ in range(obj["hp"]):
@@ -286,8 +362,15 @@ class Quest:
         while not self.rooms or self.starts[-1] <= when:
             if self.rooms:
                 last = self.rooms[-1]
-                room = Room(self.seed, self.number, len(self.rooms), OPPOSITE[last.exit_side], last.exit_at,
-                            last.coins, last.energy)
+                room = Room(
+                    self.seed,
+                    self.number,
+                    len(self.rooms),
+                    OPPOSITE[last.exit_side],
+                    last.exit_at,
+                    last.coins,
+                    last.energy,
+                )
                 self.starts.append(self.starts[-1] + last.length)
             else:
                 room = Room(self.seed, self.number, 0, "W", 3, 0, 5)
@@ -351,18 +434,28 @@ def draw_room(c, room, now, ox, oy, t, width, height):
                 for j in range(TILE):
                     for i in range(TILE):
                         if y0 + j >= TOP:
-                            c.put(x0 + i, y0 + j, hi if (i + tx * 8 + (j + ty * 8) * 3 + tick) % 9 == 0 else (
-                                scale(lo, 0.8) if j == 0 and room.things.get((tx, ty - 1)) != thing else lo))
+                            c.put(
+                                x0 + i,
+                                y0 + j,
+                                (
+                                    hi
+                                    if (i + tx * 8 + (j + ty * 8) * 3 + tick) % 9 == 0
+                                    else (scale(lo, 0.8) if j == 0 and room.things.get((tx, ty - 1)) != thing else lo)
+                                ),
+                            )
             elif thing or wall:
                 name = thing or biome["walls"][noise(tx, ty, room.number) % len(biome["walls"])]
                 draw_sprite(c, TILES[name], cols, x0, y0)
-    if room.locked and now < room.unlocked + 0.4:     # the barred way out, until the key is found
+    if room.locked and now < room.unlocked + 0.4:  # the barred way out, until the key is found
         x0, y0 = ox + room.exit[0] * TILE, oy + room.exit[1] * TILE
         for j in range(TILE):
             for i in range(TILE):
                 if y0 + j >= TOP and (i % 2 == 0 or j in (1, 6)):
-                    c.put(x0 + i, y0 + j, (255, 255, 255) if now > room.unlocked else (
-                        (255, 200, 40) if j in (1, 6) else (190, 130, 30)))
+                    c.put(
+                        x0 + i,
+                        y0 + j,
+                        (255, 255, 255) if now > room.unlocked else ((255, 200, 40) if j in (1, 6) else (190, 130, 30)),
+                    )
     for p in room.pickups:
         if p["from"] <= now < p["at"]:
             rows, pal = PICKUPS[p["kind"]]
@@ -370,7 +463,7 @@ def draw_room(c, room, now, ox, oy, t, width, height):
             if p["kind"] == "coin" and (tick + p["tile"][0]) % 4 == 3:
                 rows = ["..x..", "..g..", "..w..", "..g..", "..x.."]
             draw_sprite(c, rows, pal, x0, y0 + (1 if (tick + p["tile"][1]) % 4 < 2 else 0))
-        elif 0 <= now - p["at"] < 0.4:                # a sparkle as it's taken
+        elif 0 <= now - p["at"] < 0.4:  # a sparkle as it's taken
             cx, cy = ox + p["tile"][0] * TILE + 4, oy + p["tile"][1] * TILE + 3
             d = 2 + int((now - p["at"]) * 10)
             for dx, dy in ((d, 0), (-d, 0), (0, d), (0, -d)):
@@ -380,13 +473,19 @@ def draw_room(c, room, now, ox, oy, t, width, height):
         frames, pal = MONSTERS[m["kind"]]
         cx, cy = ox + m["tile"][0] * TILE, oy + m["tile"][1] * TILE + 1
         if now < m["dead"]:
-            dt = min(0.0, now - m["fight"])           # it wanders, and is back on its tile when the fight starts
+            dt = min(0.0, now - m["fight"])  # it wanders, and is back on its tile when the fight starts
             wob = 3.0 * math.sin(dt * 2.1)
             dx, dy = (wob, 0) if m["kind"] in ("crab", "beetle") else (wob * 0.6, 2.0 * math.sin(dt * 3.3))
             hit = any(0 <= now - h < 0.15 for h in m["hits"])
-            draw_sprite(c, frames[int(t * 4) % 2], pal, cx + int(round(dx)), cy + int(round(dy)),
-                        tint=(255, 255, 255) if hit else None)
-        elif now - m["dead"] < 0.3:                   # a puff
+            draw_sprite(
+                c,
+                frames[int(t * 4) % 2],
+                pal,
+                cx + int(round(dx)),
+                cy + int(round(dy)),
+                tint=(255, 255, 255) if hit else None,
+            )
+        elif now - m["dead"] < 0.3:  # a puff
             d = 1 + int((now - m["dead"]) * 14)
             for dx, dy in ((-d, -d), (d, -d), (-d, d), (d, d), (0, -d - 1), (0, d + 1), (-d - 1, 0), (d + 1, 0)):
                 if cy + 2 + dy >= TOP:
@@ -397,7 +496,7 @@ def draw_hud(c, coins, energy, key, flash, width, tick):
     for y in range(TOP):
         for x in range(width):
             c.px[y * width + x] = (8, 8, 22) if y < TOP - 1 else (70, 60, 130)
-    for i in range(5):                                # energy crystals
+    for i in range(5):  # energy crystals
         on = i < energy
         col = ((255, 80, 80) if flash else (60, 240, 255)) if on else (40, 50, 80)
         x = 1 + i * 4
@@ -480,7 +579,7 @@ def render_quest(cfg, width=64, height=64, t=0.0, night=False):
     rows = PIP["E" if facing == "W" else facing][frame]
     draw_sprite(c, rows, PIP_COLS, hx, hy, flip=facing == "W", tint=(255, 70, 70) if hurt else None)
     side = {"E": 1, "W": -1}.get(facing, 1 if facing == "S" else -1)
-    sx, sy = hx + 3 + side * 4, hy + 2                # the staff: a pole with a glowing tip
+    sx, sy = hx + 3 + side * 4, hy + 2  # the staff: a pole with a glowing tip
     casting = kind == "zap" and 0.2 <= now - start < 0.6
     for k in range(1, 6):
         if sy + k >= TOP:
@@ -491,18 +590,22 @@ def render_quest(cfg, width=64, height=64, t=0.0, night=False):
         if casting:
             for dx, dy in ((1, 0), (-1, 0), (0, -1), (0, 1)):
                 c.put(sx + dx, max(TOP, sy + dy), (255, 240, 120))
-    if kind == "zap" and 0.33 <= now - start < 0.6:   # the bolt
+    if kind == "zap" and 0.33 <= now - start < 0.6:  # the bolt
         tx, ty = ox + b[0] * TILE + 3, TOP + oy + b[1] * TILE + 3
         n = max(abs(tx - sx), abs(ty - sy), 1)
         for k in range(n + 1):
             x, y = sx + (tx - sx) * k / float(n), sy + (ty - sy) * k / float(n)
             jig = (noise(k, int(now * 20)) % 3) - 1
-            bx, by = (int(round(x)), int(round(y)) + jig) if abs(tx - sx) > abs(ty - sy) else (int(round(x)) + jig, int(round(y)))
+            bx, by = (
+                (int(round(x)), int(round(y)) + jig)
+                if abs(tx - sx) > abs(ty - sy)
+                else (int(round(x)) + jig, int(round(y)))
+            )
             if by >= TOP:
                 c.put(bx, by, (255, 255, 255) if k % 2 else (120, 230, 255))
 
     draw_hud(c, coins, energy, key, hurt, width, int(t * 4))
-    k = 1.0 if night else min(1.0, into / 0.5, (QUEST_SECS - into) / 0.5)   # fade between quests
+    k = 1.0 if night else min(1.0, into / 0.5, (QUEST_SECS - into) / 0.5)  # fade between quests
     if k < 1.0:
         c.px = [scale(p, k) for p in c.px]
     return c.px

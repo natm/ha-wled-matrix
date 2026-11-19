@@ -38,7 +38,7 @@ class Kart(unittest.TestCase):
         for k in range(200):
             s, leads = wk.progress(0, 0, wk.COUNTDOWN + k * wk.DRIVE / 200, c["length"])
             positions.add(1 + sum(1 for lead in leads if lead > 0))
-        self.assertGreater(len(positions), 2)          # the player's place changes during the race
+        self.assertGreater(len(positions), 2)  # the player's place changes during the race
 
     def test_track_closed_and_curvy(self):
         c = wk.circuit(0, 3)
@@ -50,7 +50,7 @@ class Kart(unittest.TestCase):
     def test_fast(self):
         wk.circuit.cache_clear()
         t0 = time.perf_counter()
-        wk.render_kart({}, t=3.6e6)                    # includes generating the circuit
+        wk.render_kart({}, t=3.6e6)  # includes generating the circuit
         first = time.perf_counter() - t0
         t0 = time.perf_counter()
         for k in range(20):

@@ -10,13 +10,27 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 from wm.screens import power as wp  # noqa: E402
 from wm.utils.text import TEXT, TINY, text_width  # noqa: E402
 
-CFG = {"solar": ["sensor.pv", "sensor.pv_ac"], "soc": "sensor.soc", "battery": "sensor.batt", "load": "sensor.load",
-       "ev": "sensor.ev", "grid": "sensor.grid", "max_kw": 10}
+CFG = {
+    "solar": ["sensor.pv", "sensor.pv_ac"],
+    "soc": "sensor.soc",
+    "battery": "sensor.batt",
+    "load": "sensor.load",
+    "ev": "sensor.ev",
+    "grid": "sensor.grid",
+    "max_kw": 10,
+}
 
 
 def states(**v):
-    names = {"pv": "sensor.pv", "pv_ac": "sensor.pv_ac", "soc": "sensor.soc", "batt": "sensor.batt",
-             "load": "sensor.load", "ev": "sensor.ev", "grid": "sensor.grid"}
+    names = {
+        "pv": "sensor.pv",
+        "pv_ac": "sensor.pv_ac",
+        "soc": "sensor.soc",
+        "batt": "sensor.batt",
+        "load": "sensor.load",
+        "ev": "sensor.ev",
+        "grid": "sensor.grid",
+    }
     return {names[k]: str(x) for k, x in v.items()}
 
 
@@ -96,12 +110,14 @@ class Drawing(unittest.TestCase):
         def first_head(t):
             px = self.frame(t=t, night=True, pv=5000)
             return next(i for i, (x, y) in enumerate(line) if at(px, x, y) == head)
+
         self.assertEqual(first_head(11), first_head(10) + 1)
 
     def test_battery_pulse_still_at_night(self):
         def fill_edge(t, night):
             px = self.frame(t=t, night=night, batt=2000, soc=50)
             return [at(px, x, y) for y in range(43, 55) for x in range(2, 11)]
+
         self.assertNotEqual(fill_edge(0.0, False), fill_edge(0.5, False))
         self.assertEqual(fill_edge(0.0, True), fill_edge(0.5, True))
 
@@ -140,15 +156,21 @@ class Drawing(unittest.TestCase):
                 self.assertTrue({at(px, x, y) for x, y in line} <= allowed, supply)
 
     def test_kw_label_sits_under_the_house_figure(self):
-        """"KW" in the 3x5 font at 45 % of the house white, rows 48-52, clear of a wide house figure ("12.4")."""
+        """ "KW" in the 3x5 font at 45 % of the house white, rows 48-52, clear of a wide house figure ("12.4")."""
         px = self.frame(load=12400)
         dim = wp.scale(wp.DEFAULT_COLOURS["house"], 0.45)
         rows = {y for y in range(64) for x in range(64) if at(px, x, y) == dim}
         self.assertEqual(rows, set(range(48, 53)))
         self.assertGreaterEqual(wp.KW_LABEL_Y, wp.HOUSE_NUMBER_Y + 7 + 3)  # 3 clear rows under the 7-row figure
         w, kw_w = text_width("12.4", TEXT), text_width("KW", TINY)
-        number = {(x, y) for x in range(32 - w // 2, 32 - w // 2 + w) for y in range(wp.HOUSE_NUMBER_Y, wp.HOUSE_NUMBER_Y + 7)}
-        label = {(x, y) for x in range(32 - kw_w // 2, 32 - kw_w // 2 + kw_w) for y in range(wp.KW_LABEL_Y, wp.KW_LABEL_Y + 5)}
+        number = {
+            (x, y) for x in range(32 - w // 2, 32 - w // 2 + w) for y in range(wp.HOUSE_NUMBER_Y, wp.HOUSE_NUMBER_Y + 7)
+        }
+        label = {
+            (x, y)
+            for x in range(32 - kw_w // 2, 32 - kw_w // 2 + kw_w)
+            for y in range(wp.KW_LABEL_Y, wp.KW_LABEL_Y + 5)
+        }
         self.assertFalse(number & label)
         line = {p for pts in wp.PATHS.values() for p in wp.path_points(pts)}
         self.assertFalse(line & label)
@@ -168,6 +190,7 @@ class Drawing(unittest.TestCase):
         def first_dot(t):
             px = self.frame(t=t, grid=2000)
             return next(i for i, (x, y) in enumerate(line) if at(px, x, y) == bright)
+
         speed = wp.dot_speed(2000, 10000)
         self.assertEqual(first_dot(1 / speed), first_dot(0) + 1)
 
@@ -178,6 +201,7 @@ class Drawing(unittest.TestCase):
         def first_dot(t):
             px = self.frame(t=t, grid=-2000)
             return next(i for i, (x, y) in enumerate(line) if at(px, x, y) == green)
+
         speed = wp.dot_speed(2000, 10000)
         self.assertEqual(first_dot(1 / speed), first_dot(0) + 1)
 
@@ -197,6 +221,7 @@ class FrameRate(unittest.TestCase):
             sys.modules.setdefault(name, types.ModuleType(name))
         sys.modules["appdaemon.plugins.hass.hassapi"] = hassapi
         import wled_matrix
+
         cls.mod = wled_matrix
 
     def app(self, night=False):

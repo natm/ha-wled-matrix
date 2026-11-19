@@ -1,9 +1,9 @@
 """Aircraft screens: live aircraft near home on the matrix, from your own ADS-B receiver.
 
-Styles: `radar` (north up, home in the middle, an arrow per aircraft coloured by height), `nearest` (the closest aircraft:
-callsign, type, distance, direction, height and speed, with the others paging along the bottom), `board` (the four
-nearest, two lines each) and `alert` (a flashing card for an "interesting" aircraft: low flyer, helicopter, military,
-emergency squawk or overhead).
+Styles: `radar` (north up, home in the middle, an arrow per aircraft coloured by height), `nearest` (the closest
+aircraft: callsign, type, distance, direction, height and speed, with the others paging along the bottom), `board`
+(the four nearest, two lines each) and `alert` (a flashing card for an "interesting" aircraft: low flyer, helicopter,
+military, emergency squawk or overhead).
 
 Data comes from either:
 - `url`: a readsb / tar1090 / dump1090-fa `aircraft.json` (read at most once a second, shared by all matrices); or
@@ -19,19 +19,44 @@ import time
 import urllib.request
 
 from ..utils.canvas import Canvas, draw_mdi
-from ..utils.text import TEXT, TINY, draw_text, text_width
+from ..utils.text import TEXT, draw_text, text_width
 
 EARTH_KM = 6371.0088
 COMPASS = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
-ARROWS = ["mdi:arrow-up", "mdi:arrow-top-right", "mdi:arrow-right", "mdi:arrow-bottom-right",
-          "mdi:arrow-down", "mdi:arrow-bottom-left", "mdi:arrow-left", "mdi:arrow-top-left"]
-KINDS = {"A1": "LIGHT", "A2": "SMALL", "A3": "AIRLINER", "A4": "AIRLINER", "A5": "HEAVY", "A6": "FAST JET",
-         "A7": "HELICOPTER", "B1": "GLIDER", "B2": "BALLOON", "B4": "MICROLIGHT", "B6": "DRONE"}
+ARROWS = [
+    "mdi:arrow-up",
+    "mdi:arrow-top-right",
+    "mdi:arrow-right",
+    "mdi:arrow-bottom-right",
+    "mdi:arrow-down",
+    "mdi:arrow-bottom-left",
+    "mdi:arrow-left",
+    "mdi:arrow-top-left",
+]
+KINDS = {
+    "A1": "LIGHT",
+    "A2": "SMALL",
+    "A3": "AIRLINER",
+    "A4": "AIRLINER",
+    "A5": "HEAVY",
+    "A6": "FAST JET",
+    "A7": "HELICOPTER",
+    "B1": "GLIDER",
+    "B2": "BALLOON",
+    "B4": "MICROLIGHT",
+    "B6": "DRONE",
+}
 SQUAWKS = {"7500": "HIJACK", "7600": "NO RADIO", "7700": "EMERGENCY"}
 
 DEFAULT_COLOURS = {
-    "ring": [0, 45, 18], "house": [210, 210, 210], "text": [110, 110, 110], "label": [210, 210, 210],
-    "accent": [255, 170, 0], "ticker": [0, 150, 255], "ground": [90, 90, 90], "marker": [150, 150, 150],
+    "ring": [0, 45, 18],
+    "house": [210, 210, 210],
+    "text": [110, 110, 110],
+    "label": [210, 210, 210],
+    "accent": [255, 170, 0],
+    "ticker": [0, 150, 255],
+    "ground": [90, 90, 90],
+    "marker": [150, 150, 150],
     "coast": [0, 55, 110],
 }
 DEFAULT_BANDS = [  # first band whose `below` (feet) the height is under; the last one has no `below`
@@ -44,8 +69,7 @@ DEFAULT_BANDS = [  # first band whose `below` (feet) the height is under; the la
 
 def distance_km(lat1, lon1, lat2, lon2):
     p1, p2 = math.radians(lat1), math.radians(lat2)
-    a = (math.sin((p2 - p1) / 2) ** 2
-         + math.cos(p1) * math.cos(p2) * math.sin(math.radians(lon2 - lon1) / 2) ** 2)
+    a = math.sin((p2 - p1) / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(math.radians(lon2 - lon1) / 2) ** 2
     return 2 * EARTH_KM * math.asin(min(1.0, math.sqrt(a)))
 
 
@@ -104,8 +128,12 @@ def local_reason(p, rules):
             return SQUAWKS[p["squawk"]].lower()
         if p.get("category") == "A7":
             return "helicopter"
-    if not p["on_ground"] and p["alt"] is not None and p["alt"] < rules.get("low_ft", 5000) \
-            and p["km"] <= rules.get("low_km", 20):
+    if (
+        not p["on_ground"]
+        and p["alt"] is not None
+        and p["alt"] < rules.get("low_ft", 5000)
+        and p["km"] <= rules.get("low_km", 20)
+    ):
         return "low flyer"
     if p["km"] <= rules.get("overhead_km", 5):
         return "overhead"
@@ -174,11 +202,20 @@ def normalise(items, cfg, home, max_age=15):
             km, brg = float(it["km"]), float(it["bearing"])
         else:
             continue
-        p = {"flight": (it.get("flight") or it.get("callsign") or it.get("hex", "")).strip().upper(),
-             "hex": it.get("hex", ""), "km": km, "bearing": brg, "alt": altitude(it),
-             "on_ground": it.get("alt_baro") == "ground", "track": it.get("track"), "gs": it.get("gs"),
-             "category": it.get("category"), "squawk": it.get("squawk"),
-             "route": it.get("route", ""), "type": it.get("type", "")}
+        p = {
+            "flight": (it.get("flight") or it.get("callsign") or it.get("hex", "")).strip().upper(),
+            "hex": it.get("hex", ""),
+            "km": km,
+            "bearing": brg,
+            "alt": altitude(it),
+            "on_ground": it.get("alt_baro") == "ground",
+            "track": it.get("track"),
+            "gs": it.get("gs"),
+            "category": it.get("category"),
+            "squawk": it.get("squawk"),
+            "route": it.get("route", ""),
+            "type": it.get("type", ""),
+        }
         p["reason"] = it["interesting"] if "interesting" in it else local_reason(p, cfg.get("alert_rules"))
         planes.append(p)
     planes.sort(key=lambda p: p["km"])
@@ -278,8 +315,11 @@ def draw_marker(c, marker, track, x, y, colour):
         if track is not None:
             t = math.radians(track)
             for s in (2, 3):
-                c.put(int(round(x + 0.5 + s * math.sin(t))), int(round(y + 0.5 - s * math.cos(t))),
-                      tuple(v // 2 for v in colour))
+                c.put(
+                    int(round(x + 0.5 + s * math.sin(t))),
+                    int(round(y + 0.5 - s * math.cos(t))),
+                    tuple(v // 2 for v in colour),
+                )
         for dx in (0, 1):
             for dy in (0, 1):
                 c.put(x + dx, y + dy, colour)
@@ -288,8 +328,9 @@ def draw_marker(c, marker, track, x, y, colour):
         sx, sy = math.sin(t), -math.cos(t)
         nose = tuple(int(v + (255 - v) * 0.8) for v in colour)
         for s, f in ((-3, 0.12), (-2, 0.3), (-1, 0.6), (0, 1.0)):
-            c.put(int(math.floor(x + 0.5 + s * sx)), int(math.floor(y + 0.5 + s * sy)),
-                  tuple(int(v * f) for v in colour))
+            c.put(
+                int(math.floor(x + 0.5 + s * sx)), int(math.floor(y + 0.5 + s * sy)), tuple(int(v * f) for v in colour)
+            )
         c.put(int(math.floor(x + 0.5 + sx)), int(math.floor(y + 0.5 + sy)), nose)
     else:
         for (dx, dy), f in arrow_sprite(track).items():
@@ -352,7 +393,7 @@ def draw_nearest(c, cfg, planes, col, mdi, now):
         draw_text(c, speed, w - text_width(speed), 47, col["text"])
     for x in range(w):
         c.put(x, 55, (35, 35, 35))
-    others = planes[1:1 + int(cfg.get("ticker_count", 5))]
+    others = planes[1 : 1 + int(cfg.get("ticker_count", 5))]
     if others:  # the others, one at a time: changes every `page_seconds`
         q = others[int(now // float(cfg.get("page_seconds", 3))) % len(others)]
         text = " ".join(x for x in (q["flight"], f"{q['km']:.0f}KM", compass(q["bearing"])) if x)
@@ -364,7 +405,7 @@ def draw_board(c, cfg, planes, col):
     for p in planes[:4]:
         draw_text(c, p["flight"][:8], 0, y, col["label"])
         right = p["route"] or kind(p)
-        right = right[:16 - min(8, len(p["flight"])) - 1]
+        right = right[: 16 - min(8, len(p["flight"])) - 1]
         draw_text(c, right, c.w - text_width(right), y, col["text"])
         info = f"{p['km']:.0f}KM {compass(p['bearing'])} {height_text(p)}"
         draw_text(c, info[:16], 0, y + 7, band_colour(p["alt"], cfg))
@@ -380,8 +421,15 @@ def draw_alert(c, cfg, p, col, mdi, flash, now):
             c.put(i, t, edge), c.put(i, h - 1 - t, edge), c.put(t, i, edge), c.put(w - 1 - t, i, edge)
     title = (p["reason"] or "").upper()[:15]
     draw_text(c, title, (w - text_width(title)) // 2, 4, col["accent"] if phase == 0 else col["label"])
-    icon(c, mdi, "mdi:helicopter" if p["category"] == "A7" else "mdi:airplane", (w - 20) // 2, 11, 20,
-         col["accent"] if phase == 0 else col["label"])
+    icon(
+        c,
+        mdi,
+        "mdi:helicopter" if p["category"] == "A7" else "mdi:airplane",
+        (w - 20) // 2,
+        11,
+        20,
+        col["accent"] if phase == 0 else col["label"],
+    )
     name = p["flight"][:10]
     draw_text(c, name, (w - text_width(name, TEXT)) // 2, 33, col["label"], TEXT)
     alt = height_text(p)

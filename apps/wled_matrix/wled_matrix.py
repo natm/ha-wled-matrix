@@ -14,12 +14,16 @@ Stars screens show weekly star points for children (`style: week`), or a pop-up 
 
 An aquarium screen (`aquarium: {}`) is an animated fish tank, needing no entities.
 A jungle screen (`jungle: {}`) is an animated rainforest (vines, monkeys, a snake, birds), needing no entities.
-A platformer screen (`platformer: {}`) is an auto-playing 16-bit-style platform game (a fox running, jumping and collecting gems), needing no entities.
+A platformer screen (`platformer: {}`) is an auto-playing 16-bit-style platform game (a fox running, jumping and
+collecting gems), needing no entities.
 A blocks screen (`blocks: {}`) is an auto-playing falling-block puzzle (rows clear when full), needing no entities.
-A surf screen (`surf: {}`) is a surfer riding waves (`wave_style`: barrel, rolling or storm, and more options), needing no entities.
-A quest screen (`quest: {}`) is an auto-playing top-down adventure (a lantern-mage zapping monsters room to room), needing no entities.
+A surf screen (`surf: {}`) is a surfer riding waves (`wave_style`: barrel, rolling or storm, and more options), needing
+no entities.
+A quest screen (`quest: {}`) is an auto-playing top-down adventure (a lantern-mage zapping monsters room to room),
+needing no entities.
 A kart screen (`kart: {}`) is an auto-playing kart race on a tilted track to the horizon, needing no entities.
-A duel screen (`duel: {}`) is two contenders battling with padded sticks on podiums in a lit TV-studio arena, needing no entities.
+A duel screen (`duel: {}`) is two contenders battling with padded sticks on podiums in a lit TV-studio arena, needing
+no entities.
 
 Network screens show internet speed and the line in use (`style: big`), or a failover alert (`style: alert`).
 
@@ -40,24 +44,27 @@ import time
 from appdaemon.plugins.hass.hassapi import Hass
 
 from wm.screens.aircraft import AircraftSource, normalise, render_aircraft
-from wm.screens.fun.aquarium import render_aquarium
-from wm.screens.fun.jungle import render_jungle
-from wm.screens.fun.platformer import render_platformer
-from wm.screens.fun.blocks import render_blocks
-from wm.screens.fun.surf import render_surf
-from wm.screens.fun.quest import render_quest
-from wm.screens.fun.kart import render_kart
-from wm.screens.fun.duel import render_duel
 from wm.screens.camera import CameraSource
+from wm.screens.fun.aquarium import render_aquarium
+from wm.screens.fun.blocks import render_blocks
+from wm.screens.fun.duel import render_duel
+from wm.screens.fun.jungle import render_jungle
+from wm.screens.fun.kart import render_kart
+from wm.screens.fun.platformer import render_platformer
+from wm.screens.fun.quest import render_quest
+from wm.screens.fun.surf import render_surf
+from wm.screens.items import items, render_screen
+from wm.screens.network import entities as network_entities
+from wm.screens.network import render_network
+from wm.screens.power import entities as power_entities
+from wm.screens.power import render_power_flow
+from wm.screens.stars import entities as stars_entities
+from wm.screens.stars import render_stars
+from wm.screens.tides import parse_events, render_tides
+from wm.screens.weather import animation_phase, render_weather
 from wm.utils.ddp import DdpSender
 from wm.utils.mdi import MdiIcons
-from wm.screens.network import entities as network_entities, render_network
-from wm.screens.stars import entities as stars_entities, render_stars
-from wm.screens.power import entities as power_entities, render_power_flow
-from wm.screens.items import items, render_screen
-from wm.screens.tides import parse_events, render_tides
 from wm.web import PAGE, frame_bytes
-from wm.screens.weather import animation_phase, render_weather
 
 try:
     from zoneinfo import ZoneInfo
@@ -97,8 +104,9 @@ class WledMatrix(Hass):
             self.register_route(self.web_frame, "matrix_frame")
             self.log("Live view: /app/matrix on AppDaemon's web server")
         self.run_every(self.tick, "now", self.refresh)
-        rates = [float(s["frame_rate"]) for s in self.screens.values()
-                 if float(s.get("frame_rate", 0)) > 1 / self.refresh]
+        rates = [
+            float(s["frame_rate"]) for s in self.screens.values() if float(s.get("frame_rate", 0)) > 1 / self.refresh
+        ]
         if rates:  # a faster timer, used only while a screen with `frame_rate` is showing
             self.run_every(self.fast_tick, "now", 1 / max(rates))
         self.log(f"Driving {len(self.matrices)} matrix(es), refresh {self.refresh}s")
@@ -163,7 +171,9 @@ class WledMatrix(Hass):
             else:
                 self.interrupt.pop(key, None)  # off again: it may interrupt next time it comes on
                 self.restart_sig.pop(key, None)
-        rotation = [i for i, n in enumerate(names) if not self.screens[n].get("priority") and self.shown(self.screens[n])]
+        rotation = [
+            i for i, n in enumerate(names) if not self.screens[n].get("priority") and self.shown(self.screens[n])
+        ]
         if not rotation:
             return None
         self.elapsed[host] += self.refresh
@@ -181,8 +191,10 @@ class WledMatrix(Hass):
             items = self.get_state(cfg["entity"], attribute=cfg.get("attribute", "aircraft"))
         else:
             items = self.aircraft.fetch(cfg["url"], cfg.get("headers"))
-        home = (cfg.get("latitude", self.get_state("zone.home", attribute="latitude")),
-                cfg.get("longitude", self.get_state("zone.home", attribute="longitude")))
+        home = (
+            cfg.get("latitude", self.get_state("zone.home", attribute="latitude")),
+            cfg.get("longitude", self.get_state("zone.home", attribute="longitude")),
+        )
         home = tuple(map(float, home)) if None not in home else None
         return normalise(items, cfg, home, float(cfg.get("max_age", 15))), home
 
@@ -198,8 +210,9 @@ class WledMatrix(Hass):
         wait = float(cfg.get("forecast_interval", 900)) if days else 60.0
         if fetched is None or now - fetched >= wait:
             try:
-                result = self.call_service("weather/get_forecasts", entity_id=entity,
-                                           type=cfg.get("forecast_type", "daily"))
+                result = self.call_service(
+                    "weather/get_forecasts", entity_id=entity, type=cfg.get("forecast_type", "daily")
+                )
                 days = find_forecast(result, entity) or days
             except Exception as err:  # keep the last forecast; try again in a minute
                 self.log(f"{entity}: get_forecasts failed: {err}", level="WARNING")
@@ -315,24 +328,34 @@ class WledMatrix(Hass):
     # ---------- web page (optional: `web: true`) ----------
     async def web_page(self, request, kwargs):
         from aiohttp import web  # AppDaemon ships aiohttp; imported here so tests run without it
+
         return web.Response(text=PAGE, content_type="text/html")
 
     async def web_info(self, request, kwargs):
         from aiohttp import web  # AppDaemon ships aiohttp; imported here so tests run without it
+
         now = time.monotonic()
         matrices = []
         for i, m in enumerate(self.matrices):
             shown = self.mirror.get(m["host"])
-            matrices.append({"id": i, "name": m.get("name", m["host"]), "host": m["host"],
-                             "width": m.get("width", 64), "height": m.get("height", 64),
-                             "showing": shown[1] if shown else None,
-                             "age": round(now - shown[0], 1) if shown else None})
+            matrices.append(
+                {
+                    "id": i,
+                    "name": m.get("name", m["host"]),
+                    "host": m["host"],
+                    "width": m.get("width", 64),
+                    "height": m.get("height", 64),
+                    "showing": shown[1] if shown else None,
+                    "age": round(now - shown[0], 1) if shown else None,
+                }
+            )
         return web.json_response({"matrices": matrices, "screens": sorted(self.screens)})
 
     async def web_frame(self, request, kwargs):
         """Raw RGB bytes, row by row. ?mode=mirror&m=<index>: the last frame sent to that matrix.
         ?mode=preview&screen=<name>&night=0|1&w=64&h=64: that screen drawn now from live states."""
         from aiohttp import web  # AppDaemon ships aiohttp; imported here so tests run without it
+
         q = request.query
         if q.get("mode") == "preview":
             name = q.get("screen")
@@ -344,9 +367,11 @@ class WledMatrix(Hass):
             pixels = await loop.run_in_executor(None, self.render, name, w, h, night)
             if pixels is None:
                 pixels = [(0, 0, 0)] * (w * h)
-            return web.Response(body=frame_bytes(pixels), content_type="application/octet-stream",
-                                headers={"X-Screen": name, "X-Width": str(w), "X-Height": str(h),
-                                         "Cache-Control": "no-store"})
+            return web.Response(
+                body=frame_bytes(pixels),
+                content_type="application/octet-stream",
+                headers={"X-Screen": name, "X-Width": str(w), "X-Height": str(h), "Cache-Control": "no-store"},
+            )
         try:
             m = self.matrices[int(q.get("m", 0))]
         except (ValueError, IndexError):
@@ -356,10 +381,17 @@ class WledMatrix(Hass):
         if not shown:
             return web.Response(status=204, headers={"Cache-Control": "no-store"})
         sent, name, pixels = shown
-        return web.Response(body=frame_bytes(pixels), content_type="application/octet-stream",
-                            headers={"X-Screen": name, "X-Width": str(w), "X-Height": str(h),
-                                     "X-Age-Ms": str(int((time.monotonic() - sent) * 1000)),
-                                     "Cache-Control": "no-store"})
+        return web.Response(
+            body=frame_bytes(pixels),
+            content_type="application/octet-stream",
+            headers={
+                "X-Screen": name,
+                "X-Width": str(w),
+                "X-Height": str(h),
+                "X-Age-Ms": str(int((time.monotonic() - sent) * 1000)),
+                "Cache-Control": "no-store",
+            },
+        )
 
 
 def find_forecast(result, entity):

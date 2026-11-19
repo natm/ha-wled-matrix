@@ -1,4 +1,4 @@
-"""Platformer screen. Run: python3 -m unittest test_platformer from the repo root: python3 -m unittest discover tests."""
+"""Platformer screen. Run from the repo root: python3 -m unittest discover tests."""
 
 import os
 import sys
@@ -47,7 +47,7 @@ class Platformer(unittest.TestCase):
         st = wpl.stage_for(0, 0)
         self.assertGreater(st.totals[-1], 20)
         self.assertEqual(st.totals, sorted(st.totals))
-        self.assertNotEqual(wpl.stage_for(0, 0).items, wpl.stage_for(0, 1).items)   # a new layout every stage
+        self.assertNotEqual(wpl.stage_for(0, 0).items, wpl.stage_for(0, 1).items)  # a new layout every stage
 
     def test_fox_runs_jumps_and_never_falls_in(self):
         for number in range(3):
@@ -57,10 +57,10 @@ class Platformer(unittest.TestCase):
                 y, air = st.path(x, st.pieces)
                 jumped |= air != 0
                 ground = st.top[x + wpl.PAD]
-                if air == 0:                          # running: on the ground or on a plank, never over a gap
+                if air == 0:  # running: on the ground or on a plank, never over a gap
                     on_plank = any(a <= x < b and py == y for a, b, py in st.planks)
                     self.assertTrue(on_plank or ground == y, (number, x, y, ground))
-                elif ground is not None:              # in the air: never below the ground under him
+                elif ground is not None:  # in the air: never below the ground under him
                     self.assertLessEqual(y, ground + 0.01, (number, x))
             self.assertTrue(jumped)
 

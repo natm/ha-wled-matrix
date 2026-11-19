@@ -5,7 +5,7 @@ A frame is a list of (r, g, b) tuples, row by row. `Canvas` has the number fonts
 out their own text rather than icon + number rows.
 """
 
-from .glyphs import BIG, SMALL, ICONS
+from .glyphs import BIG, ICONS, SMALL
 from .text import TEXT, TINY, draw_text
 from .text import text_width as _letters_width
 

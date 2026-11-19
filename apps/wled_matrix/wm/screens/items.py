@@ -4,7 +4,7 @@ Pure Python, no dependencies. A frame is a list of (r, g, b) tuples, row by row.
 """
 
 from ..utils.canvas import Canvas, draw_mdi, text_width
-from ..utils.glyphs import BIG, SMALL, ICONS
+from ..utils.glyphs import BIG, ICONS, SMALL
 from ..utils.values import format_value, pick_colour, pick_icon, to_number
 
 
@@ -23,8 +23,10 @@ def layout(screen, width, height):
         grid = screen.get("grid", {})
         nrows, ncols = int(grid.get("rows", 1)), int(grid.get("columns", 1))
         cells = screen["cells"]
-        places = [(int(c.get("row", 0)), int(c.get("col", 0)), int(c.get("rowspan", 1)), int(c.get("colspan", 1)))
-                  for c in cells]
+        places = [
+            (int(c.get("row", 0)), int(c.get("col", 0)), int(c.get("rowspan", 1)), int(c.get("colspan", 1)))
+            for c in cells
+        ]
     else:
         nrows, ncols = len(screen["rows"]), 1
         places = [(i, 0, 1, 1) for i in range(nrows)]
@@ -32,9 +34,15 @@ def layout(screen, width, height):
     def edge(n, count, total):  # integer cell boundaries that use the whole display
         return n * total // count
 
-    return [(edge(c, ncols, width), edge(r, nrows, height),
-             edge(c + cs, ncols, width) - edge(c, ncols, width),
-             edge(r + rs, nrows, height) - edge(r, nrows, height)) for r, c, rs, cs in places]
+    return [
+        (
+            edge(c, ncols, width),
+            edge(r, nrows, height),
+            edge(c + cs, ncols, width) - edge(c, ncols, width),
+            edge(r + rs, nrows, height) - edge(r, nrows, height),
+        )
+        for r, c, rs, cs in places
+    ]
 
 
 def ink_columns(rows, lit):
@@ -84,7 +92,7 @@ def draw_cell(c, item, value, rect, mdi, align="left"):
             if coverage:
                 ink = ink_columns(coverage, lambda a: a > 0.15)
                 left = x + ink[0] if ink else x
-                draw_icon = lambda dx: draw_mdi(c, coverage, x + dx, y + (h - size) // 2, icon_colour)
+                draw_icon = lambda dx: draw_mdi(c, coverage, x + dx, y + (h - size) // 2, icon_colour)  # noqa: E731
             text_x = x + size + (3 if size >= 14 else 1)
         else:
             fill = None
@@ -92,7 +100,7 @@ def draw_cell(c, item, value, rect, mdi, align="left"):
                 fill = (value / float(item.get("fill_max", 100)), colour)
             ink = ink_columns(ICONS[icon], lambda ch: ch in "OF") if icon in ICONS else None
             left = x + 1 + ink[0] if ink else x
-            draw_icon = lambda dx: c.icon(icon, x + 1 + dx, y + (h - 14) // 2, icon_colour, fill)
+            draw_icon = lambda dx: c.icon(icon, x + 1 + dx, y + (h - 14) // 2, icon_colour, fill)  # noqa: E731
             text_x = x + 18
     else:
         left = text_x

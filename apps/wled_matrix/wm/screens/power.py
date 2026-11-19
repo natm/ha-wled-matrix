@@ -19,14 +19,14 @@ from ..utils.values import to_number
 ROLES = ("solar", "grid", "battery", "soc", "load", "ev")
 
 DEFAULT_COLOURS = {
-    "solar": [255, 200, 0],     # sun and solar energy
-    "import": [255, 60, 30],    # grid import
-    "export": [0, 220, 90],     # grid export
+    "solar": [255, 200, 0],  # sun and solar energy
+    "import": [255, 60, 30],  # grid import
+    "export": [0, 220, 90],  # grid export
     "battery": [40, 120, 255],  # battery charging or discharging
-    "ev": [0, 200, 255],        # car charging
+    "ev": [0, 200, 255],  # car charging
     "house": [230, 230, 230],
-    "idle": [70, 70, 70],       # anything at 0 W
-    "line": [28, 28, 28],       # an idle line
+    "idle": [70, 70, 70],  # anything at 0 W
+    "line": [28, 28, 28],  # an idle line
     "moon": [90, 90, 140],
     "outline": [150, 150, 150],  # battery outline
 }
@@ -212,8 +212,9 @@ def render_power_flow(cfg, states, width=64, height=64, mdi=None, t=0.0, night=F
         c.icon(mdi, "mdi:white-balance-sunny", 0, 0, 13, col["solar"])
         c.number(kw(solar, idle_w), "", 0, 14, col["solar"])
     else:
-        c.icon(mdi, "mdi:weather-night" if night or solar is not None else "mdi:white-balance-sunny", 0, 0, 13,
-               col["moon"])
+        c.icon(
+            mdi, "mdi:weather-night" if night or solar is not None else "mdi:white-balance-sunny", 0, 0, 13, col["moon"]
+        )
         c.text(kw(solar, idle_w), 1, 14, col["idle"])
     # Grid, top right
     c.icon(mdi, "mdi:transmission-tower", 51, 0, 13, gcol)

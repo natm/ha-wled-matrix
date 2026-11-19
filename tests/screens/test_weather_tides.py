@@ -14,17 +14,38 @@ UTC = datetime.timezone.utc
 NOW = datetime.datetime(2026, 11, 7, 15, 0, tzinfo=UTC)  # Saturday 15:00
 
 FORECAST = [  # a met.no daily forecast as weather.get_forecasts gives it
-    {"condition": "partlycloudy", "datetime": "2026-11-07T12:00:00+00:00", "wind_bearing": 130.3,
-     "temperature": 11.0, "templow": 3.1, "wind_speed": 9.4, "precipitation": 0},
-    {"condition": "rainy", "datetime": "2026-11-08T12:00:00+00:00", "wind_bearing": 129.6,
-     "temperature": 10.6, "templow": 2.5, "wind_speed": 23.8, "precipitation": 6.2},
+    {
+        "condition": "partlycloudy",
+        "datetime": "2026-11-07T12:00:00+00:00",
+        "wind_bearing": 130.3,
+        "temperature": 11.0,
+        "templow": 3.1,
+        "wind_speed": 9.4,
+        "precipitation": 0,
+    },
+    {
+        "condition": "rainy",
+        "datetime": "2026-11-08T12:00:00+00:00",
+        "wind_bearing": 129.6,
+        "temperature": 10.6,
+        "templow": 2.5,
+        "wind_speed": 23.8,
+        "precipitation": 6.2,
+    },
     {"condition": "sunny", "datetime": "2026-11-09T12:00:00+00:00", "temperature": 9, "templow": 2},
 ]
 
 # Solva (ADMIRALTY 0492A), 7-8 Nov 2026, as UKHO Tides lists them: [UTC time, height m], no high/low given
-PREDICTIONS = [["2026-11-06 22:54:00", 1.3], ["2026-11-07 04:48:00", 5.14], ["2026-11-07 11:19:00", 1.24],
-               ["2026-11-07 17:06:00", 5.3], ["2026-11-07 23:44:00", 1.12], ["2026-11-08 05:27:00", 5.28],
-               ["2026-11-08 12:00:00", 1.13], ["2026-11-08 17:44:00", 5.35]]
+PREDICTIONS = [
+    ["2026-11-06 22:54:00", 1.3],
+    ["2026-11-07 04:48:00", 5.14],
+    ["2026-11-07 11:19:00", 1.24],
+    ["2026-11-07 17:06:00", 5.3],
+    ["2026-11-07 23:44:00", 1.12],
+    ["2026-11-08 05:27:00", 5.28],
+    ["2026-11-08 12:00:00", 1.13],
+    ["2026-11-08 17:44:00", 5.35],
+]
 
 
 def at(px, x, y, w=64):
@@ -74,7 +95,7 @@ class WeatherDrawing(unittest.TestCase):
     def test_draws_two_days_with_units_once(self):
         px = ww.render_weather({}, FORECAST, NOW)
         self.assertEqual(len(px), 64 * 64)
-        self.assertTrue(lit(px, 0, 9, 31, 27))   # today's icon
+        self.assertTrue(lit(px, 0, 9, 31, 27))  # today's icon
         self.assertTrue(lit(px, 33, 9, 63, 27))  # tomorrow's icon
         self.assertTrue(lit(px, 0, 29, 31, 42))  # today's high
         # the units sit in the middle, between the two days' figures, and nowhere else on those rows
@@ -99,8 +120,10 @@ class WeatherDrawing(unittest.TestCase):
         self.assertFalse(lit(px, 0, 0, 63, 20))
 
     def test_unknown_condition_and_missing_values_do_not_fail(self):
-        fc = [{"datetime": "2026-11-07T12:00:00+00:00", "condition": "exceptional"},
-              {"datetime": "2026-11-08T12:00:00+00:00", "condition": "lightning-rainy", "temperature": "x"}]
+        fc = [
+            {"datetime": "2026-11-07T12:00:00+00:00", "condition": "exceptional"},
+            {"datetime": "2026-11-08T12:00:00+00:00", "condition": "lightning-rainy", "temperature": "x"},
+        ]
         ww.render_weather({"wind_unit": "kmh"}, fc, NOW)
 
 
@@ -111,8 +134,10 @@ class TideEvents(unittest.TestCase):
         self.assertEqual(events[1][0], datetime.datetime(2026, 11, 7, 4, 48, tzinfo=UTC))
 
     def test_dicts_with_types_and_units(self):
-        raw = [{"t": "2026-11-07T17:06:00Z", "h": "5.3m", "kind": "HighWater"},
-               {"t": "2026-11-07T11:19:00Z", "h": "1.2 m", "kind": "LowWater"}]
+        raw = [
+            {"t": "2026-11-07T17:06:00Z", "h": "5.3m", "kind": "HighWater"},
+            {"t": "2026-11-07T11:19:00Z", "h": "1.2 m", "kind": "LowWater"},
+        ]
         events = wt.parse_events(raw, {"time_key": "t", "height_key": "h", "type_key": "kind"})
         self.assertEqual([(k, h) for _, k, h in events], [("L", 1.2), ("H", 5.3)])
 
@@ -135,17 +160,17 @@ class TideDrawing(unittest.TestCase):
     def test_list_is_the_default_and_fits(self):
         events = wt.parse_events(PREDICTIONS)
         px = wt.render_tides({"label": "NEWGALE"}, events, NOW, UTC)
-        self.assertTrue(lit(px, 0, 1, 30, 5))        # place name
-        self.assertTrue(lit(px, 60, 1, 62, 5))       # the unit, once
-        self.assertTrue(lit(px, 9, 9, 33, 15))       # first time, 17:06
-        self.assertTrue(lit(px, 9, 18, 40, 22))      # "IN 2H06"
-        self.assertTrue(lit(px, 0, 52, 63, 63))      # fourth tide, after the day divider, still on screen
+        self.assertTrue(lit(px, 0, 1, 30, 5))  # place name
+        self.assertTrue(lit(px, 60, 1, 62, 5))  # the unit, once
+        self.assertTrue(lit(px, 9, 9, 33, 15))  # first time, 17:06
+        self.assertTrue(lit(px, 9, 18, 40, 22))  # "IN 2H06"
+        self.assertTrue(lit(px, 0, 52, 63, 63))  # fourth tide, after the day divider, still on screen
 
     def test_curve_layout(self):
         events = wt.parse_events(PREDICTIONS)
         px = wt.render_tides({"label": "NEWGALE", "layout": "curve"}, events, NOW, UTC)
-        self.assertTrue(lit(px, 0, 30, 63, 46))      # the sea
-        self.assertTrue(lit(px, 0, 50, 63, 62))      # next high and low
+        self.assertTrue(lit(px, 0, 30, 63, 46))  # the sea
+        self.assertTrue(lit(px, 0, 50, 63, 62))  # next high and low
 
     def test_no_events_says_so(self):
         px = wt.render_tides({"label": "NEWGALE"}, [], NOW, UTC)
@@ -158,12 +183,14 @@ class TideDrawing(unittest.TestCase):
 class AppHelpers(unittest.TestCase):
     def test_find_forecast_in_an_appdaemon_reply(self):
         import types
+
         hassapi = types.ModuleType("appdaemon.plugins.hass.hassapi")
         hassapi.Hass = object
         for name in ("appdaemon", "appdaemon.plugins", "appdaemon.plugins.hass"):
             sys.modules.setdefault(name, types.ModuleType(name))
         sys.modules.setdefault("appdaemon.plugins.hass.hassapi", hassapi)
         import wled_matrix
+
         reply = {"result": {"response": {"weather.home": {"forecast": FORECAST}}}}
         self.assertEqual(wled_matrix.find_forecast(reply, "weather.home"), FORECAST)
         self.assertIsNone(wled_matrix.find_forecast({"result": {}}, "weather.home"))

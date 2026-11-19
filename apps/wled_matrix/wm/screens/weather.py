@@ -37,18 +37,39 @@ MOON = (235, 225, 160)
 
 # HA weather conditions -> the icon drawn for them
 ICON_FOR = {
-    "sunny": "sunny", "clear-night": "clear-night", "partlycloudy": "partlycloudy", "cloudy": "cloudy",
-    "fog": "fog", "rainy": "rainy", "pouring": "rainy", "snowy": "snowy", "snowy-rainy": "snowy", "hail": "snowy",
-    "lightning": "lightning", "lightning-rainy": "lightning", "windy": "cloudy", "windy-variant": "cloudy",
+    "sunny": "sunny",
+    "clear-night": "clear-night",
+    "partlycloudy": "partlycloudy",
+    "cloudy": "cloudy",
+    "fog": "fog",
+    "rainy": "rainy",
+    "pouring": "rainy",
+    "snowy": "snowy",
+    "snowy-rainy": "snowy",
+    "hail": "snowy",
+    "lightning": "lightning",
+    "lightning-rainy": "lightning",
+    "windy": "cloudy",
+    "windy-variant": "cloudy",
     "exceptional": "cloudy",
 }
 
 # Met Office-like temperature colours (degrees C)
-TEMP_STOPS = [(-5, (150, 90, 255)), (0, (60, 140, 255)), (5, (0, 200, 220)), (10, (120, 220, 40)),
-              (15, (255, 200, 0)), (20, (255, 120, 0)), (25, (230, 30, 0))]
+TEMP_STOPS = [
+    (-5, (150, 90, 255)),
+    (0, (60, 140, 255)),
+    (5, (0, 200, 220)),
+    (10, (120, 220, 40)),
+    (15, (255, 200, 0)),
+    (20, (255, 120, 0)),
+    (25, (230, 30, 0)),
+]
 
 WIND_UNITS = {  # label, factor from km/h
-    "mph": ("MPH", 0.621371), "kmh": ("KMH", 1.0), "ms": ("M/S", 1 / 3.6), "kn": ("KN", 0.539957),
+    "mph": ("MPH", 0.621371),
+    "kmh": ("KMH", 1.0),
+    "ms": ("M/S", 1 / 3.6),
+    "kn": ("KN", 0.539957),
 }
 TO_KMH = {"km/h": 1.0, "mph": 1.609344, "m/s": 3.6, "kn": 1.852, "ft/s": 1.09728}
 
@@ -135,7 +156,7 @@ class WeatherCanvas(Canvas):
         """Anti-aliased fill: `inside(x, y)` is tested on ss x ss samples per pixel; colour_at(px, py) the colour."""
         for py in range(int(math.floor(y0)), int(math.ceil(y1)) + 1):
             for px in range(int(math.floor(x0)), int(math.ceil(x1)) + 1):
-                n = sum(inside(px + (i + .5) / ss, py + (j + .5) / ss) for i in range(ss) for j in range(ss))
+                n = sum(inside(px + (i + 0.5) / ss, py + (j + 0.5) / ss) for i in range(ss) for j in range(ss))
                 if n:
                     self.put(px, py, colour_at(px, py), n / ss / ss)
 
@@ -153,8 +174,14 @@ class WeatherCanvas(Canvas):
 
 # ---------------------------------------------------------------- icons ----------------------------------------
 def draw_sun(c, cx, cy, r, phase=0):
-    c.shape(lambda x, y: (x - cx) ** 2 + (y - cy) ** 2 <= r * r, cx - r - 1, cy - r - 1, cx + r + 1, cy + r + 1,
-            lambda px, py: SUN)
+    c.shape(
+        lambda x, y: (x - cx) ** 2 + (y - cy) ** 2 <= r * r,
+        cx - r - 1,
+        cy - r - 1,
+        cx + r + 1,
+        cy + r + 1,
+        lambda px, py: SUN,
+    )
     for k in range(8):  # rays; alternate rays lengthen with the phase (twinkle)
         a = math.radians(k * 45 + 22.5)
         ln = r + 2.2 + (1.0 if (k + phase) % 2 == 0 else 0)
@@ -164,65 +191,76 @@ def draw_sun(c, cx, cy, r, phase=0):
 
 def cloud_inside(x0, y0, w, h):
     """A cloud filling the box (x0, y0, w, h): three bumps on a flat base."""
-    circles = [(x0 + w * .30, y0 + h * .62, h * .36), (x0 + w * .55, y0 + h * .42, h * .44),
-               (x0 + w * .78, y0 + h * .64, h * .32)]
+    circles = [
+        (x0 + w * 0.30, y0 + h * 0.62, h * 0.36),
+        (x0 + w * 0.55, y0 + h * 0.42, h * 0.44),
+        (x0 + w * 0.78, y0 + h * 0.64, h * 0.32),
+    ]
 
     def inside(x, y):
-        if x0 + w * .12 <= x <= x0 + w * .92 and y0 + h * .55 <= y <= y0 + h * .98:
+        if x0 + w * 0.12 <= x <= x0 + w * 0.92 and y0 + h * 0.55 <= y <= y0 + h * 0.98:
             return True
         return any((x - cx) ** 2 + (y - cy) ** 2 <= r * r for cx, cy, r in circles)
+
     return inside
 
 
 def draw_cloud(c, x0, y0, w, h, light=CLOUD, shade=CLOUD_SHADE):
     def colour(px, py):
         k = (py - y0) / h
-        return tuple(int(light[i] * (1 - k * .55) + shade[i] * k * .55) for i in range(3))
+        return tuple(int(light[i] * (1 - k * 0.55) + shade[i] * k * 0.55) for i in range(3))
+
     c.shape(cloud_inside(x0, y0, w, h), x0, y0, x0 + w, y0 + h, colour)
 
 
 def draw_moon(c, cx, cy, r):
-    c.shape(lambda x, y: (x - cx) ** 2 + (y - cy) ** 2 <= r * r
-            and (x - cx - r * .55) ** 2 + (y - cy + r * .3) ** 2 > (r * .85) ** 2,
-            cx - r - 1, cy - r - 1, cx + r + 1, cy + r + 1, lambda px, py: MOON)
+    c.shape(
+        lambda x, y: (x - cx) ** 2 + (y - cy) ** 2 <= r * r
+        and (x - cx - r * 0.55) ** 2 + (y - cy + r * 0.3) ** 2 > (r * 0.85) ** 2,
+        cx - r - 1,
+        cy - r - 1,
+        cx + r + 1,
+        cy + r + 1,
+        lambda px, py: MOON,
+    )
 
 
 def draw_icon(c, condition, x, y, w, h, phase=0):
     """A multi-colour icon for an HA weather condition in the box (x, y, w, h); `phase` 0..2 animates it."""
     icon = ICON_FOR.get(condition, "cloudy")
     if icon == "sunny":
-        draw_sun(c, x + w / 2, y + h / 2, min(w, h) * .28, phase)
+        draw_sun(c, x + w / 2, y + h / 2, min(w, h) * 0.28, phase)
     elif icon == "clear-night":
-        draw_moon(c, x + w / 2, y + h / 2, min(w, h) * .36)
-        for sx, sy in ((.12, .2), (.85, .15), (.8, .8)):
+        draw_moon(c, x + w / 2, y + h / 2, min(w, h) * 0.36)
+        for sx, sy in ((0.12, 0.2), (0.85, 0.15), (0.8, 0.8)):
             if (int(sx * 10) + phase) % 3:
                 c.put(x + sx * w, y + sy * h, WHITE)
     elif icon == "partlycloudy":
-        draw_sun(c, x + w * .64, y + h * .34, min(w, h) * .22, phase)
-        draw_cloud(c, x, y + h * .32, w * .82, h * .66)
+        draw_sun(c, x + w * 0.64, y + h * 0.34, min(w, h) * 0.22, phase)
+        draw_cloud(c, x, y + h * 0.32, w * 0.82, h * 0.66)
     elif icon == "cloudy":
-        draw_cloud(c, x + w * .25, y + h * .08, w * .72, h * .6, CLOUD_DARK, CLOUD_DARK_SHADE)
-        draw_cloud(c, x, y + h * .32, w * .82, h * .66)
+        draw_cloud(c, x + w * 0.25, y + h * 0.08, w * 0.72, h * 0.6, CLOUD_DARK, CLOUD_DARK_SHADE)
+        draw_cloud(c, x, y + h * 0.32, w * 0.82, h * 0.66)
     elif icon in ("rainy", "snowy", "lightning"):
-        draw_cloud(c, x, y, w, h * .62, CLOUD_DARK, CLOUD_DARK_SHADE)
+        draw_cloud(c, x, y, w, h * 0.62, CLOUD_DARK, CLOUD_DARK_SHADE)
         if icon == "lightning":
             for dx, dy in ((0, 0), (-1, 1), (-2, 2), (-1, 2), (0, 2), (-1, 3), (-2, 4)):
-                c.put(x + w * .55 + dx, y + h * .66 + dy, BOLT if phase != 1 else RAIN_TAIL)
-        for i, dx in enumerate((.25, .5, .75)):
+                c.put(x + w * 0.55 + dx, y + h * 0.66 + dy, BOLT if phase != 1 else RAIN_TAIL)
+        for i, dx in enumerate((0.25, 0.5, 0.75)):
             if icon == "lightning" and i == 1:
                 continue
             for k in range(2):
-                yy = y + h * .66 + ((phase + i + k * 2) % 3) * 2
+                yy = y + h * 0.66 + ((phase + i + k * 2) % 3) * 2
                 if icon == "snowy":
                     c.put(x + w * dx - k * 2, yy, SNOW)
                 else:
                     c.put(x + w * dx - k, yy, RAIN)
                     c.put(x + w * dx - k, yy + 1, RAIN_TAIL)
     elif icon == "fog":
-        draw_cloud(c, x + w * .1, y, w * .8, h * .58)
-        for i, yy in enumerate((.68, .82, .96)):
+        draw_cloud(c, x + w * 0.1, y, w * 0.8, h * 0.58)
+        for i, yy in enumerate((0.68, 0.82, 0.96)):
             off = ((phase + i) % 3) - 1
-            for xx in range(int(x + w * .08) + off, int(x + w * .92) + off):
+            for xx in range(int(x + w * 0.08) + off, int(x + w * 0.92) + off):
                 c.put(xx, y + h * yy - 1, FOG)
 
 
@@ -249,6 +287,7 @@ def droplet(c, x, y, colour=RAIN):
 def big_temp(c, value, x, y, colour):
     """Whole degrees in 2x digits with a small degree ring; returns the x after it."""
     from ..utils.glyphs import BIG
+
     s = str(r0(value))
     for ch in s:
         glyph = BIG[ch]
@@ -265,6 +304,7 @@ def big_temp(c, value, x, y, colour):
 
 def big_temp_width(value):
     from ..utils.glyphs import BIG
+
     s = str(r0(value))
     return sum((len(BIG[ch][0]) + 1) * 2 for ch in s) + 3
 

@@ -17,7 +17,7 @@ class DdpSender:
         data = bytes(v for px in pixels for v in px)
         self.seq = self.seq % 15 + 1
         for offset in range(0, len(data), MAX_DATA):
-            chunk = data[offset:offset + MAX_DATA]
+            chunk = data[offset : offset + MAX_DATA]
             last = offset + MAX_DATA >= len(data)
             # flags: version 1, push on the last packet; data type 0x0B = RGB, 8 bits each; destination 1 = display
             header = bytes([0x41 if last else 0x40, self.seq, 0x0B, 0x01]) + struct.pack("!IH", offset, len(chunk))

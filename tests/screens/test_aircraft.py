@@ -24,8 +24,21 @@ def marker(kind, track, x=20, y=20, colour=RED):
 
 
 def plane(km, bearing, track, alt=10000, reason=""):
-    return {"flight": "T", "hex": "", "km": km, "bearing": bearing, "alt": alt, "on_ground": False,
-            "track": track, "gs": 400, "category": None, "squawk": None, "route": "", "type": "", "reason": reason}
+    return {
+        "flight": "T",
+        "hex": "",
+        "km": km,
+        "bearing": bearing,
+        "alt": alt,
+        "on_ground": False,
+        "track": track,
+        "gs": 400,
+        "category": None,
+        "squawk": None,
+        "route": "",
+        "type": "",
+        "reason": reason,
+    }
 
 
 class ArrowTest(unittest.TestCase):

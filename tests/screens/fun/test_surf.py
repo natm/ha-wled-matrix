@@ -50,9 +50,13 @@ class Surf(unittest.TestCase):
                 px = wsu.render_surf({"wave_style": style, "sky": sky, "wave_size": 1.3}, t=9.0)
                 self.assertTrue(frame_ok(px))
                 frames.add(tuple(px))
-        self.assertEqual(len(frames), len(wsu.STYLES) * len(wsu.SKIES))   # "auto" repeats one sky per style
-        self.assertNotEqual(wsu.render_surf({"wave_style": "barrel"}, t=9.0), wsu.render_surf({"wave_style": "rolling"}, t=9.0))
-        self.assertNotEqual(wsu.render_surf({"wave_style": "barrel"}, t=9.0), wsu.render_surf({"wave_style": "storm"}, t=9.0))
+        self.assertEqual(len(frames), len(wsu.STYLES) * len(wsu.SKIES))  # "auto" repeats one sky per style
+        self.assertNotEqual(
+            wsu.render_surf({"wave_style": "barrel"}, t=9.0), wsu.render_surf({"wave_style": "rolling"}, t=9.0)
+        )
+        self.assertNotEqual(
+            wsu.render_surf({"wave_style": "barrel"}, t=9.0), wsu.render_surf({"wave_style": "storm"}, t=9.0)
+        )
         self.assertNotEqual(wsu.render_surf({"sky": "day"}, t=9.0), wsu.render_surf({"sky": "sunset"}, t=9.0))
         self.assertEqual(wsu.render_surf({"time_of_day": "night"}, t=9.0), wsu.render_surf({"sky": "night"}, t=9.0))
 
@@ -64,7 +68,7 @@ class Surf(unittest.TestCase):
         self.assertTrue(frame_ok(wsu.render_surf({"wave_style": "nonsense", "sky": "?", "board": "nope"}, t=9.0)))
 
     def test_wipeouts_setting(self):
-        t = 22 * 3 + 20.5                             # late in a ride: a wipeout or a kick-out
+        t = 22 * 3 + 20.5  # late in a ride: a wipeout or a kick-out
         self.assertNotEqual(wsu.render_surf({"wipeouts": 0}, t=t), wsu.render_surf({"wipeouts": 1}, t=t))
 
     def test_ride_length(self):

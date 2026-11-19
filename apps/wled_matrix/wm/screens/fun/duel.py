@@ -21,14 +21,14 @@ import math
 from ...utils.canvas import Canvas
 
 BOUT_SECS = 20.0
-SERIES = 5            # bouts before the scoreboard resets
-READY = 2.0           # seconds of showing off before the first move
-MOVE = 0.75           # seconds per exchange
-PODIUM_Y = 46         # y of the podium tops
+SERIES = 5  # bouts before the scoreboard resets
+READY = 2.0  # seconds of showing off before the first move
+MOVE = 0.75  # seconds per exchange
+PODIUM_Y = 46  # y of the podium tops
 MAT_Y = 59
 LEFT_X, RIGHT_X = 21, 43
-SIZE = 1.5            # the contenders are drawn at this many px per point, as 2 x 2 blocks
-STANDS = 27           # y of the hoarding in front of the crowd
+SIZE = 1.5  # the contenders are drawn at this many px per point, as 2 x 2 blocks
+STANDS = 27  # y of the hoarding in front of the crowd
 RED, BLUE = (255, 35, 45), (40, 110, 255)
 GOLD, CHROME = (255, 205, 30), (205, 210, 225)
 INK = (15, 10, 25)
@@ -36,11 +36,16 @@ SKINS = ((255, 205, 165), (230, 165, 115), (175, 110, 70), (120, 75, 50))
 HAIRS = ((255, 225, 90), (60, 35, 25), (255, 110, 40), (25, 20, 30), (235, 235, 245))
 
 DIGITS = {
-    "0": ["111", "101", "101", "101", "111"], "1": ["010", "110", "010", "010", "111"],
-    "2": ["111", "001", "111", "100", "111"], "3": ["111", "001", "111", "001", "111"],
-    "4": ["101", "101", "111", "001", "001"], "5": ["111", "100", "111", "001", "111"],
-    "6": ["111", "100", "111", "101", "111"], "7": ["111", "001", "010", "010", "010"],
-    "8": ["111", "101", "111", "101", "111"], "9": ["111", "101", "111", "001", "111"],
+    "0": ["111", "101", "101", "101", "111"],
+    "1": ["010", "110", "010", "010", "111"],
+    "2": ["111", "001", "111", "100", "111"],
+    "3": ["111", "001", "111", "001", "111"],
+    "4": ["101", "101", "111", "001", "001"],
+    "5": ["111", "100", "111", "001", "111"],
+    "6": ["111", "100", "111", "101", "111"],
+    "7": ["111", "001", "010", "010", "010"],
+    "8": ["111", "101", "111", "101", "111"],
+    "9": ["111", "101", "111", "001", "111"],
 }
 
 
@@ -87,8 +92,15 @@ def bout_plan(seed, bout):
     for i in range(n - 1):
         moves.append((0 if r("who", i) < 0.5 else 1, r("lands", i) < 0.35, r("swing", i) < 0.4))
     moves.append((winner, True, r("swing", n) < 0.5))
-    looks = [{"skin": SKINS[int(r("skin", s) * len(SKINS))], "hair": HAIRS[int(r("hair", s) * len(HAIRS))],
-              "tail": r("tail", s) < 0.5, "trim": GOLD if r("trim", s) < 0.6 else (255, 255, 255)} for s in (0, 1)]
+    looks = [
+        {
+            "skin": SKINS[int(r("skin", s) * len(SKINS))],
+            "hair": HAIRS[int(r("hair", s) * len(HAIRS))],
+            "tail": r("tail", s) < 0.5,
+            "trim": GOLD if r("trim", s) < 0.6 else (255, 255, 255),
+        }
+        for s in (0, 1)
+    ]
     return winner, moves, looks
 
 
@@ -104,10 +116,19 @@ def pose(side, tau, winner, moves):
     """How contender `side` stands at bout time tau: lean (radians, + is backwards), stick angle (radians from
     level, + is far end up), stick offset forward and up, a hop, whether a leg is off the podium, and where they
     are relative to their podium (dx backwards, dy down) once they've fallen."""
-    p = {"lean": 0.0, "angle": 1.05, "fwd": 0.0, "up": 0.0, "hop": 0.0, "leg": False, "dx": 0.0, "dy": 0.0,
-         "down": False}
+    p = {
+        "lean": 0.0,
+        "angle": 1.05,
+        "fwd": 0.0,
+        "up": 0.0,
+        "hop": 0.0,
+        "leg": False,
+        "dx": 0.0,
+        "dy": 0.0,
+        "down": False,
+    }
     end = READY + len(moves) * MOVE
-    if tau < READY:                                   # pumping the stick overhead for the crowd
+    if tau < READY:  # pumping the stick overhead for the crowd
         k = smooth(tau / 0.4) * smooth((READY - tau) / 0.4)
         p["up"] = k * (5 + 1.2 * math.sin(tau * 9 + side * 2))
         p["angle"] = 1.05 * (1 - k)
@@ -118,7 +139,9 @@ def pose(side, tau, winner, moves):
         u = (tau - READY - i * MOVE) / MOVE
         attacker, lands, swing = moves[i]
         if side == attacker:
-            back, thrust = smooth(u / 0.25) * (1 - smooth((u - 0.25) / 0.12)), smooth((u - 0.25) / 0.14) * (1 - smooth((u - 0.5) / 0.4))
+            back, thrust = smooth(u / 0.25) * (1 - smooth((u - 0.25) / 0.12)), smooth((u - 0.25) / 0.14) * (
+                1 - smooth((u - 0.5) / 0.4)
+            )
             if swing:
                 p["angle"] = 1.05 + 0.7 * back - 1.5 * thrust
                 p["fwd"], p["up"] = 2.5 * thrust, 2 * back - 1 * thrust
@@ -133,29 +156,29 @@ def pose(side, tau, winner, moves):
                 p["lean"] = (0.5 * math.exp(-3.0 * v) * math.sin(v * 16) + 0.22 * math.exp(-4 * v)) if u > 0.4 else 0.0
                 p["angle"] = 1.05 + (1.2 * math.exp(-4 * v) if u > 0.4 else 0.0)
                 p["leg"] = 0.42 < u < 0.8
-            else:                                     # a block: the stick upright, out in front
+            else:  # a block: the stick upright, out in front
                 p["angle"] = 1.05 + 0.5 * k
                 p["fwd"], p["up"] = 2.0 * k, 1.0 * k
                 p["lean"] = 0.08 * smooth((u - 0.38) / 0.1) * (1 - smooth((u - 0.5) / 0.4))
         return p
     v = tau - end
-    if side == winner:                                # a moment to look, then bouncing with the stick overhead
+    if side == winner:  # a moment to look, then bouncing with the stick overhead
         k = smooth((v - 0.5) / 0.4)
         p["up"], p["angle"] = 5.5 * k, 1.05 * (1 - k)
         p["hop"] = k * 2.5 * abs(math.sin(v * 6.5))
         return p
-    if v < 0.9:                                       # teetering on the edge
+    if v < 0.9:  # teetering on the edge
         p["lean"] = 0.25 + 0.3 * v + 0.2 * math.sin(v * 14)
         p["angle"], p["up"], p["leg"] = 1.05 + 0.8 * math.sin(v * 11), 2.0, True
         return p
-    w = v - 0.9                                       # and off, backwards, onto the mat
+    w = v - 0.9  # and off, backwards, onto the mat
     drop = MAT_Y - PODIUM_Y
     fall = min(1.0, w / 0.6)
     p["lean"] = 0.75 + (math.pi / 2 - 0.75) * smooth(fall * 1.1)
     p["dx"] = 1.0 * smooth(fall * 1.2)
     p["dy"] = drop * fall * fall
     p["angle"], p["up"] = 1.9, 2.0
-    if w > 0.6:                                       # a little bounce, then flat out
+    if w > 0.6:  # a little bounce, then flat out
         p["dy"] = drop - max(0.0, 2.0 * math.sin((w - 0.6) * 9) * math.exp(-(w - 0.6) * 4))
         p["down"] = True
         p["leg"] = int(w * 3) % 2 == 0
@@ -168,25 +191,35 @@ def draw_fighter(c, x, y, facing, colour, look, p):
     skin, hair, trim = look["skin"], look["hair"], look["trim"]
     pts = []
     front = [(2, 0, (255, 255, 255)), (2, 1, skin), (2, 2, skin), (2, 3, skin)]
-    if p["leg"]:                                      # the front foot comes off
+    if p["leg"]:  # the front foot comes off
         front = [(3, 1, (255, 255, 255)), (3, 2, skin), (2, 3, skin)]
     pts += [(-2, 0, (255, 255, 255)), (-2, 1, skin), (-2, 2, skin), (-2, 3, skin)] + front
     pts += [(dx, 4, colour) for dx in range(-2, 3)]
     for dy in range(5, 9):
         for dx in range(-2, 2):
             pts.append((dx, dy, trim if dy == 5 else (scale(colour, 0.7) if dx == -2 else colour)))
-    pts += [(-1, 9, skin), (0, 9, skin), (1, 9, skin), (-1, 10, colour), (0, 10, skin), (1, 10, INK),
-            (-1, 11, colour), (0, 11, colour), (1, 11, colour), (-2, 10, hair)]
+    pts += [
+        (-1, 9, skin),
+        (0, 9, skin),
+        (1, 9, skin),
+        (-1, 10, colour),
+        (0, 10, skin),
+        (1, 10, INK),
+        (-1, 11, colour),
+        (0, 11, colour),
+        (1, 11, colour),
+        (-2, 10, hair),
+    ]
     if look["tail"]:
         pts += [(-2, 9, hair), (-3, 8, hair)]
     a = p["angle"]
     ca, sa = math.cos(a), math.sin(a)
     sx, sy = 3.0 + p["fwd"], 7.0 + p["up"]
-    for hand in (-1.6, 1.6):                          # arms: shoulders to the two hands on the stick
+    for hand in (-1.6, 1.6):  # arms: shoulders to the two hands on the stick
         hx, hy = sx + ca * hand, sy + sa * hand
         for k in range(1, 5):
             pts.append((0.5 + (hx - 0.5) * k / 4.0, 8 + (hy - 8) * k / 4.0, skin))
-    for k in range(-11, 12):                          # the stick: chrome pole, a fat gold pad at each end
+    for k in range(-11, 12):  # the stick: chrome pole, a fat gold pad at each end
         d = k / 2.0
         qx, qy = sx + ca * d, sy + sa * d
         if abs(d) > 3.4:
@@ -203,7 +236,7 @@ def draw_fighter(c, x, y, facing, colour, look, p):
         c.put(bx + 1, by, col)
         c.put(bx, by + 1, col)
         c.put(bx + 1, by + 1, col)
-    tx, ty = sx + ca * 5.5, sy + sa * 5.5             # where the far end of the stick is
+    tx, ty = sx + ca * 5.5, sy + sa * 5.5  # where the far end of the stick is
     return ox + facing * (tx * cl - ty * sl) * SIZE, oy - (tx * sl + ty * cl) * SIZE
 
 
@@ -219,7 +252,7 @@ def render_duel(cfg, width=64, height=64, t=0.0, night=False):
     winner, moves, looks = bout_plan(seed, bout)
     end = READY + len(moves) * MOVE
     won = scores(seed, bout)
-    decided = tau >= end + 1.5                        # the loser has hit the mat
+    decided = tau >= end + 1.5  # the loser has hit the mat
     if decided:
         won[winner] += 1
     cheer = smooth((tau - end - 1.2) / 0.4) if tau > end else (1 - smooth(tau / READY)) * 0.6
@@ -228,7 +261,7 @@ def render_duel(cfg, width=64, height=64, t=0.0, night=False):
     # The stands: tiers of dark seats and a crowd of dots; cameras flash, more when someone's off.
     for y in range(height):
         row = (5, 4, 18) if y < STANDS else (16, 12, 44)
-        px[y * width:(y + 1) * width] = [row] * width
+        px[y * width : (y + 1) * width] = [row] * width
     beat = int(t * 6)
     for y in range(12, STANDS, 2):
         tier = (y - 12) // 2
@@ -241,7 +274,7 @@ def render_duel(cfg, width=64, height=64, t=0.0, night=False):
             if noise(x, y, beat) < 3 + int(cheer * 14):
                 col = (255, 255, 255)
             c.put(x, y - (1 if jump else 0), col)
-    for x in range(width):                            # the hoarding in front of the stands
+    for x in range(width):  # the hoarding in front of the stands
         px[STANDS * width + x] = GOLD if (x // 4) % 3 else CHROME
         px[(STANDS + 1) * width + x] = (RED, GOLD, BLUE)[(x // 8 + 1) % 3] if x % 8 else INK
         px[(STANDS + 2) * width + x] = scale(GOLD, 0.5)
@@ -318,7 +351,7 @@ def render_duel(cfg, width=64, height=64, t=0.0, night=False):
     tips = [None, None]
     for s in sorted((0, 1), key=lambda s: -poses[s]["dy"]):
         tips[s] = draw_fighter(c, (LEFT_X, RIGHT_X)[s], PODIUM_Y - 1, (1, -1)[s], (RED, BLUE)[s], looks[s], poses[s])
-    if READY <= tau < end:                            # a star where the stick lands or is blocked
+    if READY <= tau < end:  # a star where the stick lands or is blocked
         i = int((tau - READY) / MOVE)
         u = (tau - READY - i * MOVE) / MOVE
         if 0.36 <= u < 0.56:
@@ -326,16 +359,18 @@ def render_duel(cfg, width=64, height=64, t=0.0, night=False):
             hx, hy = int(round(hx)), int(round(hy))
             col = (255, 255, 255) if moves[i][1] else (255, 235, 90)
             d = 2 + int((u - 0.36) * 16)
-            for dx, dy in ((d, 0), (-d, 0), (0, d), (0, -d)) + (((d, d), (-d, -d), (d, -d), (-d, d)) if moves[i][1] else ()):
+            for dx, dy in ((d, 0), (-d, 0), (0, d), (0, -d)) + (
+                ((d, d), (-d, -d), (d, -d), (-d, d)) if moves[i][1] else ()
+            ):
                 c.put(hx + dx, hy + dy, col)
             c.put(hx, hy, (255, 255, 255))
-    if tau > end + 1.5 and tau < end + 1.9:           # dust off the mat
+    if tau > end + 1.5 and tau < end + 1.9:  # dust off the mat
         d = int((tau - end - 1.5) * 14)
         lx = (LEFT_X - 12, RIGHT_X + 12)[1 - winner]
         for dx in (-6 - d, -3 - d, 3 + d, 6 + d):
             c.put(lx + dx, MAT_Y - 1 - d // 2, (230, 230, 255))
 
-    k = 1.0 if night else min(1.0, tau / 0.4, (BOUT_SECS - tau) / 0.4)   # lights down between bouts
+    k = 1.0 if night else min(1.0, tau / 0.4, (BOUT_SECS - tau) / 0.4)  # lights down between bouts
     if k < 1.0:
         c.px = [scale(p, 0.25 + 0.75 * k) for p in c.px]
     return c.px

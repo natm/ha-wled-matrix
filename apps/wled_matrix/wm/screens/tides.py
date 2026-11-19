@@ -27,8 +27,8 @@ DAY_NAMES = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
 GREY = (120, 120, 120)
 DIM = (80, 80, 80)
 WHITE = (215, 215, 215)
-HIGH = (0, 200, 255)    # high water: cyan
-LOW = (0, 90, 200)      # low water: deep blue
+HIGH = (0, 200, 255)  # high water: cyan
+LOW = (0, 90, 200)  # low water: deep blue
 WATER = (0, 45, 110)
 COUNTDOWN = (0, 150, 200)
 DIVIDER = (35, 35, 35)
@@ -179,21 +179,22 @@ def render_curve(c, events, now, zone, label, width, height, hmax=None):
 
     def y_of(h):
         return y_bot - h / hmax * (y_bot - y_top)
+
     span = (end - start).total_seconds()
     for x in range(width):
-        when = start + datetime.timedelta(seconds=(x + .5) / width * span)
+        when = start + datetime.timedelta(seconds=(x + 0.5) / width * span)
         h = height_at(events, when)
         if h is None:
             continue
         y = y_of(h)
         past = when < now
         for yy in range(int(math.ceil(y)), y_bot + 1):  # water, deeper = darker
-            k = 1 - (yy - y) / (y_bot - y_top) * .6
-            c.put(x, yy, scale(WATER, k * (.55 if past else 1)))
+            k = 1 - (yy - y) / (y_bot - y_top) * 0.6
+            c.put(x, yy, scale(WATER, k * (0.55 if past else 1)))
         frac = y - math.floor(y)
-        line = scale(HIGH, .5 if past else 1)
-        c.put(x, math.floor(y), line, 1 - frac * .5)
-        if frac > .3:
+        line = scale(HIGH, 0.5 if past else 1)
+        c.put(x, math.floor(y), line, 1 - frac * 0.5)
+        if frac > 0.3:
             c.put(x, math.floor(y) + 1, line, frac)
     h_now = height_at(events, now)
     if h_now is not None:
@@ -202,7 +203,7 @@ def render_curve(c, events, now, zone, label, width, height, hmax=None):
             c.put(xn, yy, (90, 90, 90))
         yn = y_of(h_now)
         for dx, dy in ((0, 0), (1, 0), (0, 1), (1, 1)):
-            c.put(xn - .5 + dx, yn - .5 + dy, WHITE)
+            c.put(xn - 0.5 + dx, yn - 0.5 + dy, WHITE)
     for i, (when, kind, h) in enumerate(upcoming(events, now, 2)):
         y = 50 + i * 7
         c.triangle(1, y + 1, kind == "H", HIGH if kind == "H" else LOW)

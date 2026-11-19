@@ -18,16 +18,16 @@ from bisect import bisect_right
 from ...utils.canvas import Canvas
 
 COLS, ROWS, CELL = 10, 20, 3
-WELL_X, WELL_Y = 2, 2                                 # top-left pixel of the well's inside
+WELL_X, WELL_Y = 2, 2  # top-left pixel of the well's inside
 PANEL_X = 36
-SLOT = 300.0          # seconds; every slot starts with a fresh game
-STEP = 0.1            # seconds per row while the shape is being turned and slid into place
-DROP = 0.045          # seconds per row once it's lined up
-LOCK = 0.12           # pause after landing
-FLASH = 0.55          # full rows flash and dissolve
-COLLAPSE = 0.2        # the stack above falls
-OVER = 3.0            # the game-over curtain
-HIGH = 14             # a stack this many rows high ends the game
+SLOT = 300.0  # seconds; every slot starts with a fresh game
+STEP = 0.1  # seconds per row while the shape is being turned and slid into place
+DROP = 0.045  # seconds per row once it's lined up
+LOCK = 0.12  # pause after landing
+FLASH = 0.55  # full rows flash and dissolve
+COLLAPSE = 0.2  # the stack above falls
+OVER = 3.0  # the game-over curtain
+HIGH = 14  # a stack this many rows high ends the game
 NIGHT_T = 41.3
 
 # The seven shapes: (name, colour, squares as (x, y)).
@@ -47,16 +47,26 @@ BORDER = ((0, 225, 255), (175, 60, 255))
 LABEL = (110, 150, 255)
 
 FONT = {
-    "0": ["111", "101", "101", "101", "111"], "1": ["010", "110", "010", "010", "111"],
-    "2": ["111", "001", "111", "100", "111"], "3": ["111", "001", "111", "001", "111"],
-    "4": ["101", "101", "111", "001", "001"], "5": ["111", "100", "111", "001", "111"],
-    "6": ["111", "100", "111", "101", "111"], "7": ["111", "001", "010", "010", "010"],
-    "8": ["111", "101", "111", "101", "111"], "9": ["111", "101", "111", "001", "111"],
-    "N": ["110", "101", "101", "101", "101"], "E": ["111", "100", "110", "100", "111"],
-    "X": ["101", "101", "010", "101", "101"], "T": ["111", "010", "010", "010", "010"],
-    "L": ["100", "100", "100", "100", "111"], "I": ["111", "010", "010", "010", "111"],
-    "S": ["011", "100", "010", "001", "110"], "C": ["011", "100", "100", "100", "011"],
-    "O": ["010", "101", "101", "101", "010"], "R": ["110", "101", "110", "101", "101"],
+    "0": ["111", "101", "101", "101", "111"],
+    "1": ["010", "110", "010", "010", "111"],
+    "2": ["111", "001", "111", "100", "111"],
+    "3": ["111", "001", "111", "001", "111"],
+    "4": ["101", "101", "111", "001", "001"],
+    "5": ["111", "100", "111", "001", "111"],
+    "6": ["111", "100", "111", "101", "111"],
+    "7": ["111", "001", "010", "010", "010"],
+    "8": ["111", "101", "111", "101", "111"],
+    "9": ["111", "101", "111", "001", "111"],
+    "N": ["110", "101", "101", "101", "101"],
+    "E": ["111", "100", "110", "100", "111"],
+    "X": ["101", "101", "010", "101", "101"],
+    "T": ["111", "010", "010", "010", "010"],
+    "L": ["100", "100", "100", "100", "111"],
+    "I": ["111", "010", "010", "010", "111"],
+    "S": ["011", "100", "010", "001", "110"],
+    "C": ["011", "100", "100", "100", "011"],
+    "O": ["010", "101", "101", "101", "010"],
+    "R": ["110", "101", "110", "101", "101"],
     "W": ["101", "101", "101", "111", "101"],
 }
 
@@ -134,14 +144,20 @@ def choose(board, kind, noise_key):
                 if filled == COLS:
                     cleared += 1
             bumps = sum(abs(hs[i] - hs[i + 1]) for i in range(COLS - 1))
-            score = (-0.5 * sum(hs) + 8.0 * cleared - 7.5 * holes - 1.8 * bumps
-                     - 1.2 * max(hs) + AI_NOISE * rand(noise_key, rot, x))
+            score = (
+                -0.5 * sum(hs)
+                + 8.0 * cleared
+                - 7.5 * holes
+                - 1.8 * bumps
+                - 1.2 * max(hs)
+                + AI_NOISE * rand(noise_key, rot, x)
+            )
             if best_score is None or score > best_score:
                 best, best_score = (rot, x), score
     return best
 
 
-AI_NOISE = 16.0   # how much randomness blurs the player's judgement: higher = worse play, shorter games
+AI_NOISE = 16.0  # how much randomness blurs the player's judgement: higher = worse play, shorter games
 
 
 class Timeline:
@@ -178,8 +194,16 @@ class Timeline:
         board = self.board
         if self.over or self.time >= SLOT - OVER - 1.5:
             last = self.time >= SLOT - OVER - 1.5
-            self.add({"start": self.time, "kind": None, "board": board, "lines": self.lines, "score": self.score,
-                      "end": SLOT if last else self.time + OVER})
+            self.add(
+                {
+                    "start": self.time,
+                    "kind": None,
+                    "board": board,
+                    "lines": self.lines,
+                    "score": self.score,
+                    "end": SLOT if last else self.time + OVER,
+                }
+            )
             self.done = last
             self.new_game(self.game + 1)
             return
@@ -189,7 +213,7 @@ class Timeline:
         rot, x, row, tm = 0, 3, 0, self.time
         moves = [(tm, x, rot, row)]
         if fits(board, shapes[0], x, row):
-            while (rot, x) != (want_rot, want_x):     # turn and slide, a step at a time, as it falls
+            while (rot, x) != (want_rot, want_x):  # turn and slide, a step at a time, as it falls
                 tm += STEP
                 moved = False
                 if rot != want_rot:
@@ -217,16 +241,25 @@ class Timeline:
             if row + cy >= 0:
                 new[row + cy][x + cx] = kind + 1
         cleared = [y for y in range(ROWS) if all(new[y])]
-        rec = {"start": self.time, "kind": kind, "next": nxt, "moves": moves, "lock": lock, "cleared": cleared,
-               "board": board, "lines": self.lines, "score": self.score,
-               "end": lock + LOCK + (FLASH + COLLAPSE if cleared else 0)}
+        rec = {
+            "start": self.time,
+            "kind": kind,
+            "next": nxt,
+            "moves": moves,
+            "lock": lock,
+            "cleared": cleared,
+            "board": board,
+            "lines": self.lines,
+            "score": self.score,
+            "end": lock + LOCK + (FLASH + COLLAPSE if cleared else 0),
+        }
         if cleared:
             new = [[0] * COLS for _ in cleared] + [r for y, r in enumerate(new) if y not in cleared]
         self.board = new
         self.lines += len(cleared)
         self.score += POINTS[len(cleared)]
         self.count += 1
-        self.over = any(any(r) for r in new[:ROWS - HIGH])
+        self.over = any(any(r) for r in new[: ROWS - HIGH])
         self.add(rec)
 
 
@@ -320,14 +353,14 @@ def render_blocks(cfg, width=64, height=64, t=0.0, night=False):
     tl = timeline_for(seed, int(slot))
     tl.until(into)
     i = bisect_right(tl.starts, into) - 1
-    if i < 0:                                         # the moment before the first shape
+    if i < 0:  # the moment before the first shape
         draw_frame(c, width, height, 0.0)
         draw_panel(c, tl.kind(0) if not tl.records else tl.records[0]["kind"], 0, 0, False)
         return c.px
     rec = tl.records[i]
     board, lines, score = rec["board"], rec["lines"], rec["score"]
 
-    if rec["kind"] is None:                           # game over: a grey curtain rises, then the well empties
+    if rec["kind"] is None:  # game over: a grey curtain rises, then the well empties
         age = into - rec["start"]
         draw_frame(c, width, height, 0.0)
         up = int(min(1.0, age / 1.1) * ROWS)
@@ -358,7 +391,7 @@ def render_blocks(cfg, width=64, height=64, t=0.0, night=False):
             tm, x, rot, row = m
     piece = {(x + cx, row + cy) for cx, cy in TURNS[kind][rot]}
 
-    flash = after - LOCK if cleared else -1.0         # >= 0 once the rows start flashing
+    flash = after - LOCK if cleared else -1.0  # >= 0 once the rows start flashing
     fall = max(0.0, min(1.0, (flash - FLASH) / COLLAPSE)) if flash >= FLASH else 0.0
     for y in range(ROWS):
         below = sum(1 for r in cleared if r > y)
@@ -372,11 +405,11 @@ def render_blocks(cfg, width=64, height=64, t=0.0, night=False):
             if flash >= 0 and y in cleared:
                 if flash >= FLASH:
                     continue
-                if abs(bx - 4.5) < (flash - FLASH * 0.45) / (FLASH * 0.55) * 5.5:   # dissolves from the middle
+                if abs(bx - 4.5) < (flash - FLASH * 0.45) / (FLASH * 0.55) * 5.5:  # dissolves from the middle
                     continue
                 cc = (255, 255, 255) if int(flash / 0.14) % 2 == 0 else mix(cc, (255, 255, 255), 0.4)
             elif mine and 0 <= after < LOCK:
-                cc = mix(cc, (255, 255, 255), 0.6)    # a blink as it lands
+                cc = mix(cc, (255, 255, 255), 0.6)  # a blink as it lands
             draw_cell(c, bx, y, cc, dy)
     draw_panel(c, rec["next"], lines, score, cleared and 0 <= after - LOCK < 1.0)
     return c.px

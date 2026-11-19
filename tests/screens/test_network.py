@@ -8,9 +8,14 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 
 from wm.screens import network as wn  # noqa: E402
 
-CFG = {"style": "big", "backup_active": "binary_sensor.on_backup",
-       "links": [{"name": "FTTP", "down": "sensor.f_rx", "up": "sensor.f_tx", "latency": "sensor.f_lat", "max_down": 1800},
-                 {"name": "STARLINK", "down": "sensor.s_rx", "up": "sensor.s_tx", "latency": "sensor.s_lat"}]}
+CFG = {
+    "style": "big",
+    "backup_active": "binary_sensor.on_backup",
+    "links": [
+        {"name": "FTTP", "down": "sensor.f_rx", "up": "sensor.f_tx", "latency": "sensor.f_lat", "max_down": 1800},
+        {"name": "STARLINK", "down": "sensor.s_rx", "up": "sensor.s_tx", "latency": "sensor.s_lat"},
+    ],
+}
 
 
 def states(backup="off", **v):
@@ -51,12 +56,12 @@ class Drawing(unittest.TestCase):
     def test_big_draws_download_in_blue_and_fill_bar(self):
         px = wn.render_network(CFG, states(f_rx=900, f_tx=60, f_lat=12))
         self.assertIn(wn.DOWN, lit(px, 0, 10, 63, 34))
-        bar = px[62 * 64:63 * 64]
+        bar = px[62 * 64 : 63 * 64]
         self.assertEqual(sum(1 for p in bar if p == wn.DOWN), 32)  # 900 of 1800 = half the width
 
     def test_four_digits_fit(self):
         px = wn.render_network(CFG, states(f_rx=1799, f_tx=110, f_lat=12))
-        self.assertEqual(px[20 * 64 + 0], (0, 0, 0))   # nothing touches the edges
+        self.assertEqual(px[20 * 64 + 0], (0, 0, 0))  # nothing touches the edges
         self.assertEqual(px[20 * 64 + 63], (0, 0, 0))
 
     def test_big_on_backup_flashes_main_down(self):
@@ -65,7 +70,7 @@ class Drawing(unittest.TestCase):
         off = wn.render_network(CFG, s, t=0.5)
         self.assertIn(wn.BAD, lit(on, 0, 58, 63, 63))
         self.assertNotIn(wn.BAD, lit(off, 0, 58, 63, 63))
-        self.assertIn(wn.WARN, lit(on, 0, 0, 63, 7))   # line name amber while on the backup
+        self.assertIn(wn.WARN, lit(on, 0, 0, 63, 7))  # line name amber while on the backup
 
     def test_big_on_backup_steady_at_night(self):
         s = states("on", f_rx="unavailable", s_rx=120, s_tx=15)
@@ -90,5 +95,6 @@ if __name__ == "__main__":
 class Web(unittest.TestCase):
     def test_frame_bytes(self):
         from wm import web
+
         self.assertEqual(web.frame_bytes([(1, 2, 3), (4, 5, 6)]), bytes([1, 2, 3, 4, 5, 6]))
         self.assertIn("/matrix_frame", web.PAGE)

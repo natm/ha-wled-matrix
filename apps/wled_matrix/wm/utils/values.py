@@ -1,6 +1,5 @@
 """Entity states as numbers, and how a value is shown: number text, unit, colour and icon by thresholds."""
 
-
 ON_STATES = {"on", "open", "home", "heat", "heating", "true", "detected", "playing"}
 OFF_STATES = {"off", "closed", "not_home", "idle", "false", "clear", "paused", "standby"}
 

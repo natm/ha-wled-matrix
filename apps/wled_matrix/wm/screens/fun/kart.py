@@ -23,15 +23,15 @@ from functools import lru_cache
 
 from ...utils.canvas import Canvas
 
-HZ = 22              # horizon row
+HZ = 22  # horizon row
 CAM_H = 10.0
 FOCAL = 40.0
-GRID = 256           # the circuit map is GRID x GRID world units
-ROAD = 7.0           # half-width of the asphalt
+GRID = 256  # the circuit map is GRID x GRID world units
+ROAD = 7.0  # half-width of the asphalt
 KERB = 1.6
 LAPS = 3
 COUNTDOWN = 2.4
-DRIVE = 48.0         # seconds of racing
+DRIVE = 48.0  # seconds of racing
 FINISH = 5.0
 RACE_T = COUNTDOWN + DRIVE + FINISH
 NPTS = 720
@@ -83,15 +83,24 @@ TREE = ((20, 120, 40), (50, 170, 60), (90, 55, 25))
 CRYSTAL = ((80, 240, 255), (255, 255, 255))
 
 FONT = {
-    "0": ["111", "101", "101", "101", "111"], "1": ["010", "110", "010", "010", "111"],
-    "2": ["111", "001", "111", "100", "111"], "3": ["111", "001", "011", "001", "111"],
-    "4": ["101", "101", "111", "001", "001"], "5": ["111", "100", "111", "001", "111"],
-    "6": ["111", "100", "111", "101", "111"], "7": ["111", "001", "010", "010", "010"],
-    "8": ["111", "101", "111", "101", "111"], "9": ["111", "101", "111", "001", "111"],
-    "L": ["100", "100", "100", "100", "111"], "P": ["110", "101", "110", "100", "100"],
-    "/": ["001", "001", "010", "100", "100"], "S": ["111", "100", "111", "001", "111"],
-    "T": ["111", "010", "010", "010", "010"], "N": ["1001", "1101", "1011", "1001", "1001"],
-    "D": ["110", "101", "101", "101", "110"], "R": ["110", "101", "110", "101", "101"],
+    "0": ["111", "101", "101", "101", "111"],
+    "1": ["010", "110", "010", "010", "111"],
+    "2": ["111", "001", "111", "100", "111"],
+    "3": ["111", "001", "011", "001", "111"],
+    "4": ["101", "101", "111", "001", "001"],
+    "5": ["111", "100", "111", "001", "111"],
+    "6": ["111", "100", "111", "101", "111"],
+    "7": ["111", "001", "010", "010", "010"],
+    "8": ["111", "101", "111", "101", "111"],
+    "9": ["111", "101", "111", "001", "111"],
+    "L": ["100", "100", "100", "100", "111"],
+    "P": ["110", "101", "110", "100", "100"],
+    "/": ["001", "001", "010", "100", "100"],
+    "S": ["111", "100", "111", "001", "111"],
+    "T": ["111", "010", "010", "010", "010"],
+    "N": ["1001", "1101", "1011", "1001", "1001"],
+    "D": ["110", "101", "101", "101", "110"],
+    "R": ["110", "101", "110", "101", "101"],
     "H": ["101", "101", "111", "101", "101"],
 }
 
@@ -201,11 +210,11 @@ def progress(seed, race, tr, length):
     """Arclength the player has driven at race time tr, and each rival's lead over the player (in units)."""
     speed = LAPS * length / (DRIVE - 0.75)
     d = max(0.0, tr - COUNTDOWN)
-    if d < 1.5:                                   # pulling away from the grid
+    if d < 1.5:  # pulling away from the grid
         s = speed * d * d / 3.0
     elif d < DRIVE:
         s = speed * (d - 0.75)
-    else:                                         # over the line, slowing down
+    else:  # over the line, slowing down
         e = min(d - DRIVE, FINISH)
         s = LAPS * length + speed * (e - e * e / (2 * FINISH))
     leads = []
@@ -258,8 +267,16 @@ def draw_scaled(c, rows, pal, cx, by, scale):
 
 def kart_pal(k):
     _, body, helmet, ears = DRIVERS[k]
-    return {"b": body, "B": mix(body, (0, 0, 0), 0.45), "h": helmet, "e": ears, "w": (25, 25, 30),
-            "x": (120, 120, 130), "t": (255, 40, 40), "v": (40, 40, 60)}
+    return {
+        "b": body,
+        "B": mix(body, (0, 0, 0), 0.45),
+        "h": helmet,
+        "e": ears,
+        "w": (25, 25, 30),
+        "x": (120, 120, 130),
+        "t": (255, 40, 40),
+        "v": (40, 40, 60),
+    }
 
 
 def render_kart(cfg, width=64, height=64, t=0.0, night=False):
@@ -321,7 +338,7 @@ def render_kart(cfg, width=64, height=64, t=0.0, night=False):
             else:
                 d, i = 99.0, 0
             if d < ROAD:
-                if i < 3 or i >= NPTS - 1:               # start line, chequered
+                if i < 3 or i >= NPTS - 1:  # start line, chequered
                     col = (250, 250, 250) if (int(wx * 0.5) + int(wy * 0.5)) % 2 else (20, 20, 20)
                 else:
                     col = ASPHALT[(gx // 3 + gy // 3) % 2]
@@ -382,8 +399,11 @@ def render_kart(cfg, width=64, height=64, t=0.0, night=False):
             for yy in range(-h, h + 1):
                 w = h - abs(yy)
                 for xx in range(-w, w + 1):
-                    canvas.put(int(sx) + xx, int(sy - 4 * scale - h + yy + bob),
-                               CRYSTAL[1] if xx == -w + (w > 0) and yy < 0 else CRYSTAL[0])
+                    canvas.put(
+                        int(sx) + xx,
+                        int(sy - 4 * scale - h + yy + bob),
+                        CRYSTAL[1] if xx == -w + (w > 0) and yy < 0 else CRYSTAL[0],
+                    )
         else:
             curv = curvature(pts, length, s + leads[k - 1])
             rows = KART_LEAN if abs(curv) > 0.006 else KART

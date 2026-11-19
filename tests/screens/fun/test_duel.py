@@ -50,7 +50,7 @@ class Duel(unittest.TestCase):
             self.assertLess(end + 3.5, wd.BOUT_SECS)
             self.assertEqual(moves[-1][:2], (winner, True))
             loser = wd.pose(1 - winner, end + 3.0, winner, moves)
-            self.assertTrue(loser["down"])            # on the mat
+            self.assertTrue(loser["down"])  # on the mat
             self.assertFalse(wd.pose(winner, end + 3.0, winner, moves)["down"])
         self.assertEqual(sum(wd.scores(0, wd.SERIES - 1)), wd.SERIES - 1)
         self.assertEqual(wd.scores(0, wd.SERIES), [0, 0])

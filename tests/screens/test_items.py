@@ -3,8 +3,8 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "apps", "wled_matrix"))
 
-from wm.utils.glyphs import BIG  # noqa: E402
 from wm.screens.items import render_screen  # noqa: E402
+from wm.utils.glyphs import BIG  # noqa: E402
 from wm.utils.values import format_value  # noqa: E402
 
 

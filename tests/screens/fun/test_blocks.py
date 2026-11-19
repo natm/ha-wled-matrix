@@ -48,9 +48,9 @@ class Blocks(unittest.TestCase):
         tl.until(wb.SLOT)
         shapes = [r for r in tl.records if r["kind"] is not None]
         self.assertGreater(sum(len(r["cleared"]) for r in shapes), 10)
-        self.assertGreaterEqual(sum(1 for r in tl.records if r["kind"] is None), 1)   # at least one restart
+        self.assertGreaterEqual(sum(1 for r in tl.records if r["kind"] is None), 1)  # at least one restart
         self.assertEqual(tl.records[-1]["end"], wb.SLOT)
-        for r in shapes:                              # the stack never passes the top
+        for r in shapes:  # the stack never passes the top
             self.assertFalse(any(r["board"][0]))
 
     def test_counter_goes_up_when_a_row_clears(self):
@@ -60,10 +60,10 @@ class Blocks(unittest.TestCase):
         nxt = tl.records[tl.records.index(rec) + 1]
         self.assertEqual(nxt["lines"], rec["lines"] + len(rec["cleared"]))
         flash = wb.render_blocks({}, t=rec["lock"] + wb.LOCK + 0.05)
-        self.assertGreater(flash.count((255, 255, 255)), 9 * 8)   # a full white row (the squares' lit corners aside)
+        self.assertGreater(flash.count((255, 255, 255)), 9 * 8)  # a full white row (the squares' lit corners aside)
 
     def test_any_frame_on_demand(self):
-        a = wb.render_blocks({"seed": 3}, t=250.0)   # straight to a late frame, then again from a fresh cache
+        a = wb.render_blocks({"seed": 3}, t=250.0)  # straight to a late frame, then again from a fresh cache
         wb._timelines.clear()
         self.assertEqual(a, wb.render_blocks({"seed": 3}, t=250.0))
 

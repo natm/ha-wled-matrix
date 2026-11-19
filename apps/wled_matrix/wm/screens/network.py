@@ -16,19 +16,19 @@ a 1.8 Gbit/s line still fits in four digits). Latency is green under 25 ms, ambe
 Pure Python, no dependencies; `t` is a time in seconds, used only for the flashing.
 """
 
-from ..utils.glyphs import BIG
 from ..utils.canvas import TextCanvas
-from ..utils.values import to_number
+from ..utils.glyphs import BIG
 from ..utils.text import TEXT, TINY, text_width
+from ..utils.values import to_number
 
-DOWN = (0, 170, 255)     # download: blue, as on the classic internet screen
-UP = (255, 150, 0)       # upload: orange
+DOWN = (0, 170, 255)  # download: blue, as on the classic internet screen
+UP = (255, 150, 0)  # upload: orange
 WHITE = (230, 230, 230)
 LABEL = (120, 120, 120)  # the unit label, once
 BAR_BG = (20, 20, 20)
 BAD = (255, 40, 30)
 GOOD = (0, 220, 90)
-WARN = (240, 150, 0)     # amber: on the backup line
+WARN = (240, 150, 0)  # amber: on the backup line
 
 ARROW_D = ["00100", "00100", "11111", "01110", "00100"]
 ARROW_U = ARROW_D[::-1]

@@ -68,7 +68,7 @@ MONKEY_LOOKS = [
     ((185, 185, 200), (240, 240, 250), (255, 205, 170)),
 ]
 
-MONKEY_SLOT = 9.5   # each monkey swings across once per slot, with a new look, direction and tempo
+MONKEY_SLOT = 9.5  # each monkey swings across once per slot, with a new look, direction and tempo
 CLIMB_SLOT = 19.0
 VINE_TOP = 4
 # Two rows ("lanes") of swing vines: (vine length, x of the first vine). Vines are 16 px apart, and a swing ends
@@ -81,14 +81,62 @@ VINE_GAP = 16
 # j beak tip.
 BIRDS = {
     "macaw": [
-        ["....ww......", "....www.....", "ttt.bwwwhh..", "..tttbbbcek.", ".....bbbb.k.", "............", "............"],
-        ["............", "............", "ttt.wwwwhh..", "..tttwwwcek.", ".....bbbb.k.", "............", "............"],
-        ["............", "............", "ttt.bbbbhh..", "..tttbbbcek.", ".....wwwb.k.", ".....www....", "......ww...."],
+        [
+            "....ww......",
+            "....www.....",
+            "ttt.bwwwhh..",
+            "..tttbbbcek.",
+            ".....bbbb.k.",
+            "............",
+            "............",
+        ],
+        [
+            "............",
+            "............",
+            "ttt.wwwwhh..",
+            "..tttwwwcek.",
+            ".....bbbb.k.",
+            "............",
+            "............",
+        ],
+        [
+            "............",
+            "............",
+            "ttt.bbbbhh..",
+            "..tttbbbcek.",
+            ".....wwwb.k.",
+            ".....www....",
+            "......ww....",
+        ],
     ],
     "toucan": [
-        ["...ww.......", "...www......", "tt.bwwhh....", ".ttbbbhekkkj", "...bbbcckkj.", "............", "............"],
-        ["............", "............", "tt.wwwhh....", ".ttwwwhekkkj", "...bbbcckkj.", "............", "............"],
-        ["............", "............", "tt.bbbhh....", ".ttbbbhekkkj", "...wwwcckkj.", "...www......", "....ww......"],
+        [
+            "...ww.......",
+            "...www......",
+            "tt.bwwhh....",
+            ".ttbbbhekkkj",
+            "...bbbcckkj.",
+            "............",
+            "............",
+        ],
+        [
+            "............",
+            "............",
+            "tt.wwwhh....",
+            ".ttwwwhekkkj",
+            "...bbbcckkj.",
+            "............",
+            "............",
+        ],
+        [
+            "............",
+            "............",
+            "tt.bbbhh....",
+            ".ttbbbhekkkj",
+            "...wwwcckkj.",
+            "...www......",
+            "....ww......",
+        ],
     ],
     "small": [
         ["..ww....", "..ww....", "t.bwhh..", ".tbbcek.", "........", "........"],
@@ -119,11 +167,11 @@ BIRD_SLOT = 9.0
 # --- Snake -------------------------------------------------------------------------------------------------------
 # (body, band, belly side) colours.
 SNAKE_LOOKS = [
-    ((60, 255, 40), (255, 240, 0)),      # green tree python
-    ((255, 40, 30), (255, 230, 0)),      # coral snake
-    ((255, 200, 0), (255, 90, 0)),       # yellow boa
-    ((0, 220, 200), (255, 255, 255)),    # turquoise
-    ((255, 110, 200), (140, 40, 255)),   # pink
+    ((60, 255, 40), (255, 240, 0)),  # green tree python
+    ((255, 40, 30), (255, 230, 0)),  # coral snake
+    ((255, 200, 0), (255, 90, 0)),  # yellow boa
+    ((0, 220, 200), (255, 255, 255)),  # turquoise
+    ((255, 110, 200), (140, 40, 255)),  # pink
 ]
 SNAKE_SLOT = 17.0
 SNAKE_LEN = 22
@@ -161,7 +209,7 @@ def pick(items, r):
 
 def backdrop(x, y, t):
     """Misty green light between the trees: brightest mid-height, with slow slanting sunbeams."""
-    g = math.exp(-((y - 26) / 21.0) ** 2)
+    g = math.exp(-(((y - 26) / 21.0) ** 2))
     col = (int(3 + 9 * g), int(26 + 44 * g), int(22 + 26 * g))
     if y < 52 and math.sin((x + y * 0.55) * 0.21 + math.sin(t * 0.35) * 0.6) > 0.78:
         col = (int(col[0] * 1.5 + 8), int(col[1] * 1.35 + 6), int(col[2] * 1.15))
@@ -192,7 +240,7 @@ def draw_vine(c, x0, length, angle, sway, i, taut=False):
         c.put(x, y, VINE[(k // 2 + i) % 2])
         if k % 5 == 3 and k > 4 and (not taut or k < length - 3):
             c.put(x + (1 if (k // 5 + i) % 2 else -1), y, VINE_LEAF)
-    if not taut:                                      # a little leaf tuft at the loose end
+    if not taut:  # a little leaf tuft at the loose end
         c.put(int(round(x0 + sa * length + sway)) - 1, int(round(VINE_TOP + ca * length)) + 1, VINE_LEAF)
         c.put(int(round(x0 + sa * length + sway)) + 1, int(round(VINE_TOP + ca * length)) + 1, VINE[0])
 
@@ -202,7 +250,7 @@ def monkey_visit(i, slot, seed):
     return {
         "look": MONKEY_LOOKS[(int(r("look") * 2) * 2 + i) % len(MONKEY_LOOKS)],
         "direction": 1 if r("dir") < 0.5 else -1,
-        "swing": 1.0 + r("swing") * 0.4,              # seconds per vine
+        "swing": 1.0 + r("swing") * 0.4,  # seconds per vine
         "start": r("start") * 0.6,
     }
 
@@ -214,7 +262,7 @@ def bird_visit(i, slot, seed):
         "kind": kind,
         "look": pick(BIRD_LOOKS[kind], r("look")),
         "direction": 1 if r("dir") < 0.5 else -1,
-        "speed": 9.0 + r("speed") * 7.0,              # 9-16 px/s: 2-3 px a frame at 5 fps
+        "speed": 9.0 + r("speed") * 7.0,  # 9-16 px/s: 2-3 px a frame at 5 fps
         "start": r("start") * 2.5,
         "height": 9 + r("height") * 27,
         "wander": (0.5 + r("wf") * 0.9, 1.0 + r("wa") * 3.0, r("wp") * 6.3),
@@ -228,7 +276,7 @@ def render_jungle(cfg, width=64, height=64, t=0.0, night=False):
     if night:
         t = 0.0
     seed = cfg.get("seed", 0)
-    tick = int(t * 5 + 0.001)                         # animation step for flapping, tongues, tails
+    tick = int(t * 5 + 0.001)  # animation step for flapping, tongues, tails
 
     # Backdrop: misty light, sunbeams and the dim trunks of far-off trees.
     for y in range(height):
@@ -261,19 +309,27 @@ def render_jungle(cfg, width=64, height=64, t=0.0, night=False):
     for s in range(SNAKE_LEN - 1, -1, -1):
         x = int(round(head - sdir * s))
         wave = math.sin(s * 0.62 - t * 4.2)
-        y = bough_y(x) - 2 + int(round(wave * 1.5 * min(1.0, s / 4.0))) - max(0, 3 - s)   # the neck rears up
+        y = bough_y(x) - 2 + int(round(wave * 1.5 * min(1.0, s / 4.0))) - max(0, 3 - s)  # the neck rears up
         col = band if s > 2 and s % 5 < 2 else body
-        if s >= SNAKE_LEN - 3:                        # thin tail
+        if s >= SNAKE_LEN - 3:  # thin tail
             c.put(x, y + 1, col)
             continue
         c.put(x, y, col)
         c.put(x, y + 1, scale(col, 0.72))
     hx = int(round(head))
     hy = bough_y(hx) - 5
-    for dx, dy, col in ((1, -1, body), (2, -1, body), (1, 0, body), (2, 0, body), (3, 0, body),
-                        (1, 1, scale(body, 0.72)), (2, 1, scale(body, 0.72)), (2, -1, EYE)):
+    for dx, dy, col in (
+        (1, -1, body),
+        (2, -1, body),
+        (1, 0, body),
+        (2, 0, body),
+        (3, 0, body),
+        (1, 1, scale(body, 0.72)),
+        (2, 1, scale(body, 0.72)),
+        (2, -1, EYE),
+    ):
         c.put(hx + dx * sdir, hy + dy, col)
-    if tick % 3 != 1 and not night:                   # tongue flick
+    if tick % 3 != 1 and not night:  # tongue flick
         c.put(hx + 4 * sdir, hy + 1, (255, 40, 60))
         if tick % 3 == 0:
             c.put(hx + 5 * sdir, hy + 2 * (tick % 2), (255, 40, 60))
@@ -290,7 +346,7 @@ def render_jungle(cfg, width=64, height=64, t=0.0, night=False):
             if (x * 7 + y * 11) % 37 == 0:
                 col = MOSS
             if (left and x == 4 + (y > 50) + (y > 58)) or (right and x == 54 - (y > 50) - (y > 58)):
-                col = BARK[1]                         # shaded edge
+                col = BARK[1]  # shaded edge
             c.put(x, y, col)
 
     # Monkeys and their vines. Each monkey owns a lane of vines and swings along it like a pendulum, handing over
@@ -335,7 +391,7 @@ def render_jungle(cfg, width=64, height=64, t=0.0, night=False):
     slot, into = divmod(t + CLIMB_SLOT * 0.42, CLIMB_SLOT)
     r = lambda *k: rand(seed, "climb", int(slot), *k)  # noqa: E731
     fur, belly, face = pick(MONKEY_LOOKS, r("look"))
-    step = int(into / 0.4)                            # one pull every 0.4 s
+    step = int(into / 0.4)  # one pull every 0.4 s
     if step * 2 < height + 14:
         up = r("dir") < 0.6
         y = (height + 1 - step * 2) if up else (-12 + step * 2)
@@ -358,7 +414,7 @@ def render_jungle(cfg, width=64, height=64, t=0.0, night=False):
         y = int(round(v["height"] + math.sin(into * freq + phase) * amp))
         flap = (0, 1, 2, 1)[(tick + i) % 4]
         if flap == 2:
-            y -= 1                                    # the body lifts on the downstroke
+            y -= 1  # the body lifts on the downstroke
         flock.append((v["speed"], frames[flap], v["look"], x, y, v["direction"]))
     for speed, rows, look, x, y, direction in sorted(flock, key=lambda b: b[0]):
         k = 0.72 + 0.28 * (speed - 9.0) / 7.0
@@ -395,13 +451,27 @@ def render_jungle(cfg, width=64, height=64, t=0.0, night=False):
         top = height - 3 - int(1.4 + 1.4 * math.sin(x * 0.7) + 0.8 * math.sin(x * 0.31 + 2))
         for y in range(top, height):
             c.put(x, y, FERN[1] if (x + y * 2) % 5 else scale(FERN[1], 0.6))
-    for i, (x0, h, lean) in enumerate(((3, 7, 1), (9, 9, -1), (12, 6, 1), (19, 8, 1), (24, 5, -1), (30, 9, -1),
-                                       (33, 7, 1), (40, 6, -1), (44, 9, 1), (50, 7, -1), (54, 8, 1), (60, 9, -1))):
+    for i, (x0, h, lean) in enumerate(
+        (
+            (3, 7, 1),
+            (9, 9, -1),
+            (12, 6, 1),
+            (19, 8, 1),
+            (24, 5, -1),
+            (30, 9, -1),
+            (33, 7, 1),
+            (40, 6, -1),
+            (44, 9, 1),
+            (50, 7, -1),
+            (54, 8, 1),
+            (60, 9, -1),
+        )
+    ):
         for k in range(h):
             f = k / h
             x = int(round(x0 + lean * f * f * h * 0.55 + math.sin(t * 1.4 + i) * f * 1.3))
             c.put(x, height - 2 - k, FERN[2] if k == h - 1 else FERN[(k + i) % 2])
-            if k % 2 and 1 < k < h - 1:               # leaflets either side of the frond
+            if k % 2 and 1 < k < h - 1:  # leaflets either side of the frond
                 c.put(x - 1, height - 2 - k, FERN[0])
                 c.put(x + 1, height - 2 - k, FERN[1])
     for i, (x, y) in enumerate(((16, 58), (27, 60), (37, 58), (47, 60))):

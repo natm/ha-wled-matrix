@@ -44,11 +44,21 @@ SPRITES = {
 }
 
 # Bright colours a fish's body and its stripes/fins are picked from at random.
-COLOURS = [(255, 110, 0), (20, 80, 255), (255, 230, 0), (255, 40, 80), (230, 230, 240), (0, 220, 120),
-           (170, 60, 255), (0, 200, 255), (255, 150, 200), (255, 60, 0)]
+COLOURS = [
+    (255, 110, 0),
+    (20, 80, 255),
+    (255, 230, 0),
+    (255, 40, 80),
+    (230, 230, 240),
+    (0, 220, 120),
+    (170, 60, 255),
+    (0, 200, 255),
+    (255, 150, 200),
+    (255, 60, 0),
+]
 
 FISH_COUNT = 7
-SLOT = 18.0          # each fish gets a new random look and path every visit, one visit per slot of up to 18 s
+SLOT = 18.0  # each fish gets a new random look and path every visit, one visit per slot of up to 18 s
 
 EYE = (10, 10, 20)
 SAND = (150, 120, 60)
@@ -75,7 +85,7 @@ def draw_sprite(c, rows, palette, x0, y0, direction, wag):
         for gx, ch in enumerate(row):
             if ch == ".":
                 continue
-            if ch == "f" and gx < 2 and wag:      # tail flicks up and down a pixel
+            if ch == "f" and gx < 2 and wag:  # tail flicks up and down a pixel
                 gy2 = gy + (1 if gy < len(rows) // 2 else -1) if gy != len(rows) // 2 else gy
             else:
                 gy2 = gy
@@ -108,9 +118,9 @@ def visit(i, slot, seed):
         "sprite": sprite,
         "palette": {"b": body, "s": second, "f": fin},
         "direction": 1 if r("dir") < 0.5 else -1,
-        "speed": 4.0 + r("speed") * 7.0,          # 4-11 px/s: a crossing takes ~6-18 s
-        "start": r("start") * 5.0,                 # enters 0-5 s into its slot
-        "depth": 0.1 + r("depth") * 0.62,          # fraction of the water height
+        "speed": 4.0 + r("speed") * 7.0,  # 4-11 px/s: a crossing takes ~6-18 s
+        "start": r("start") * 5.0,  # enters 0-5 s into its slot
+        "depth": 0.1 + r("depth") * 0.62,  # fraction of the water height
         "wander": (0.3 + r("wf") * 0.8, 1.0 + r("wa") * 4.0, r("wp") * 6.3),  # vertical drift: freq, amplitude, phase
     }
 
@@ -178,7 +188,7 @@ def render_aquarium(cfg, width=64, height=64, t=0.0, night=False):
         y = int(sand_top - 2 - phase * (sand_top - 1))
         x = int(round(15 + math.sin(t * 3 + i * 2) * 1.0 + i % 2))
         c.put(x, y, BUBBLE)
-        if i % 2 == 0 and phase > 0.3:                # some bubbles grow as they rise
+        if i % 2 == 0 and phase > 0.3:  # some bubbles grow as they rise
             c.put(x + 1, y, scale(BUBBLE, 0.6))
 
     return c.px

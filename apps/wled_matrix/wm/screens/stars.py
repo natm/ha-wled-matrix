@@ -12,8 +12,8 @@ Pure Python, no dependencies; `t` is a time in seconds (the twinkles), still at 
 """
 
 from ..utils.canvas import TextCanvas
-from ..utils.values import to_number
 from ..utils.text import TEXT, TINY, text_width
+from ..utils.values import to_number
 
 GOLD = (255, 200, 0)
 DIM = (55, 45, 20)
@@ -90,8 +90,7 @@ def render_alert(c, cfg, states, width, height, t, night, mdi):
     name = str(kid.get("name", "")).upper()
     c.text(name, mid, 37, colour, TEXT if text_width(name, TEXT) <= width - 2 else TINY, align="center")
     stars_row(c, mdi, 47, week, most, width=width)
-    c.text(f"{week}/{most}  YEAR {year}" if year is not None else f"{week}/{most}", mid, 58, GREY, TINY,
-           align="center")
+    c.text(f"{week}/{most}  YEAR {year}" if year is not None else f"{week}/{most}", mid, 58, GREY, TINY, align="center")
 
 
 def render_stars(cfg, states, width=64, height=64, mdi=None, t=0.0, night=False):

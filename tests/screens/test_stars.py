@@ -8,15 +8,22 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 
 from wm.screens import stars as ws  # noqa: E402
 
-KIDS = [{"id": "seth", "name": "Seth", "colour": [0, 170, 255], "week": "counter.sw", "year": "counter.sy"},
-        {"id": "dylan", "name": "Dylan", "colour": [0, 220, 90], "week": "counter.dw", "year": "counter.dy"}]
+KIDS = [
+    {"id": "seth", "name": "Seth", "colour": [0, 170, 255], "week": "counter.sw", "year": "counter.sy"},
+    {"id": "dylan", "name": "Dylan", "colour": [0, 220, 90], "week": "counter.dw", "year": "counter.dy"},
+]
 WEEK = {"style": "week", "kids": KIDS}
 ALERT = {"style": "alert", "alert": "input_text.a", "kids": KIDS}
 
 
 def st(sw=5, sy=41, dw=3, dy=28, alert=""):
-    return {"counter.sw": str(sw), "counter.sy": str(sy), "counter.dw": str(dw), "counter.dy": str(dy),
-            "input_text.a": alert}
+    return {
+        "counter.sw": str(sw),
+        "counter.sy": str(sy),
+        "counter.dw": str(dw),
+        "counter.dy": str(dy),
+        "input_text.a": alert,
+    }
 
 
 class Stars(unittest.TestCase):
@@ -43,8 +50,8 @@ class Stars(unittest.TestCase):
         minus = ws.render_stars(ALERT, st(alert="dylan,-"))
         blank = ws.render_stars(ALERT, st(alert="nobody,+"))
         self.assertIn((0, 220, 90), plus)
-        self.assertIn(ws.GOLD, plus[:30 * 64])        # WELL DONE in gold, top half
-        self.assertNotIn(ws.GOLD, minus[:30 * 64])    # STAR OFF is grey
+        self.assertIn(ws.GOLD, plus[: 30 * 64])  # WELL DONE in gold, top half
+        self.assertNotIn(ws.GOLD, minus[: 30 * 64])  # STAR OFF is grey
         self.assertEqual(set(blank), {(0, 0, 0)})
 
     def test_alert_twinkles_still_at_night(self):
@@ -64,19 +71,27 @@ class RestartOn(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         import types
+
         hassapi = types.ModuleType("appdaemon.plugins.hass.hassapi")
         hassapi.Hass = object
         for name in ("appdaemon", "appdaemon.plugins", "appdaemon.plugins.hass"):
             sys.modules.setdefault(name, types.ModuleType(name))
         sys.modules["appdaemon.plugins.hass.hassapi"] = hassapi
         import wled_matrix
+
         cls.mod = wled_matrix
 
     def app(self, restart_on):
         app = self.mod.WledMatrix()
-        app.screens = {"week": {"rows": []},
-                       "pop": {"priority": True, "show_if": "input_boolean.on", "max_time": 20,
-                               **({"restart_on": restart_on} if restart_on else {})}}
+        app.screens = {
+            "week": {"rows": []},
+            "pop": {
+                "priority": True,
+                "show_if": "input_boolean.on",
+                "max_time": 20,
+                **({"restart_on": restart_on} if restart_on else {}),
+            },
+        }
         app.matrices = [{"host": "a", "screens": ["week", "pop"]}]
         app.refresh = 1.0
         app.position, app.elapsed, app.interrupt, app.restart_sig = {"a": 0}, {"a": 0.0}, {}, {}
@@ -103,8 +118,8 @@ class RestartOn(unittest.TestCase):
     def test_restart_on_brings_it_back(self):
         app = self.app(["counter.w"])
         self.assertEqual(self.run_at(app, 100), "pop")
-        self.assertEqual(self.run_at(app, 121), "week")      # first 20 s over
-        app.states["counter.w"] = "2"                         # another press, boolean still on
+        self.assertEqual(self.run_at(app, 121), "week")  # first 20 s over
+        app.states["counter.w"] = "2"  # another press, boolean still on
         self.assertEqual(self.run_at(app, 125), "pop")
-        self.assertEqual(self.run_at(app, 144), "pop")        # a fresh 20 s from 125
+        self.assertEqual(self.run_at(app, 144), "pop")  # a fresh 20 s from 125
         self.assertEqual(self.run_at(app, 146), "week")

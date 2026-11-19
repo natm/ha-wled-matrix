@@ -71,7 +71,6 @@ def rasterise(path, size):
             if y1 != y2:
                 edges.append((x1, y1, x2, y2))
     scale = size / VIEWBOX
-    n = size * SAMPLES
     rows = []
     for py in range(size):
         row = []
@@ -158,8 +157,12 @@ def _polygons(d):
                 x2, y2, ex, ey = x + x2, y + y2, x + ex, y + ey
             for t in (k / 8 for k in range(1, 9)):
                 u = 1 - t
-                poly.append((u ** 3 * x + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t ** 3 * ex,
-                             u ** 3 * y + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t ** 3 * ey))
+                poly.append(
+                    (
+                        u**3 * x + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t**3 * ex,
+                        u**3 * y + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t**3 * ey,
+                    )
+                )
             last_ctrl = (x2, y2, "C")
             x, y = ex, ey
         elif c in "QT":
@@ -201,7 +204,7 @@ def _arc(x1, y1, rx, ry, rot, large, sweep, x2, y2):
     cos_p, sin_p = math.cos(phi), math.sin(phi)
     dx, dy = (x1 - x2) / 2, (y1 - y2) / 2
     x1p, y1p = cos_p * dx + sin_p * dy, -sin_p * dx + cos_p * dy
-    lam = (x1p ** 2) / (rx ** 2) + (y1p ** 2) / (ry ** 2)
+    lam = (x1p**2) / (rx**2) + (y1p**2) / (ry**2)
     if lam > 1:
         rx, ry = rx * math.sqrt(lam), ry * math.sqrt(lam)
     num_ = rx * rx * ry * ry - rx * rx * y1p * y1p - ry * ry * x1p * x1p
