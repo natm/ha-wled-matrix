@@ -29,9 +29,9 @@ An [AppDaemon](https://appdaemon.readthedocs.io/) app that shows Home Assistant 
 
 **Manual:** copy `apps/wled_matrix/` into your AppDaemon `apps` folder.
 
-Then add a config to your `apps.yaml` (see below, and [`examples/apps.yaml`](examples/apps.yaml)).
+Then add a config to your `apps.yaml` (see below, and [`examples/apps.yaml`](examples/apps.yaml)). Each screen type below shows an example; its full options are in [`docs/screens/`](docs/screens/).
 
-**Restart AppDaemon after installing or updating the app.** AppDaemon only scans for new app folders at start-up, and it reloads `wled_matrix.py` but not its helper modules (`wm_*.py`), so an update can leave them out of step until a restart. Changes to your `apps.yaml` reload by themselves.
+**Restart AppDaemon after installing or updating the app.** AppDaemon only scans for new app folders at start-up, and it reloads `wled_matrix.py` but not its helper modules (the `wm/` package), so an update can leave them out of step until a restart. Changes to your `apps.yaml` reload by themselves.
 
 **Home Assistant OS, AppDaemon app 0.15 or later:** AppDaemon reads apps from its own folder, not from `/config/appdaemon/apps` where HACS installs them. Point it there with `app_dir: /homeassistant/appdaemon/apps` in `appdaemon.yaml`, e.g. with the app's `init_commands` option:
 
@@ -119,25 +119,7 @@ Each cell sizes itself: the icon follows the cell height (up to 24 px), and the 
 
 ![a 4x2 grid next to the 3-row screen](docs/grid.png)
 
-Row / cell options:
-
-| Key | Meaning |
-|---|---|
-| `icon` | `none` for no icon, any Material Design Icon as `mdi:<name>`, or a built-in pixel icon: `battery`, `plug`, `pylon`, `sun`, `thermometer` (these work offline) |
-| `icon_thresholds` | List of `{above, icon}`, checked top to bottom; the first one the value reaches wins (else `icon`) |
-| `font` | `small` always uses the small font (default: big when it fits), so neighbouring cells match |
-| `align` | `left` (default), `center` or `right`: moves the icon and the number together within the cell, measured on the pixels actually drawn (e.g. centred temperature rows). Set it on a screen to apply to all its cells; a cell's own `align` wins |
-| `show_value` | `false` shows only the icon, centred and coloured by `thresholds` (e.g. a switch's status icon) |
-| `icon_size` | MDI icon size in pixels (default: the cell height, max 24) |
-| `row`, `col`, `rowspan`, `colspan` | Grid screens only: the cell's position and size (from 0) |
-| `entity` | Leave out for an icon-only cell. Any entity with a numeric state, or an on/off state with `format: onoff`. Unavailable or unknown shows `-` |
-| `format` | `percent` (0–100, `%`), `power` (W, or kW from 1000 W), `number` (rounded), `decimal1` / `decimal2` (that many decimals), `mbps` (Mbit/s in: `M` with one decimal below 10, whole numbers to 999, then `G` in Gbit/s), `onoff` (shows `on`/`off` for switches, lights and binary sensors; on counts as 1 and off as 0 for `thresholds`), `clock` (minutes after midnight shown as a time, e.g. 402 → `6:42`) |
-| `unit` | Override the unit text (characters available: `% W k C ° h M G`) |
-| `colour` | `[r, g, b]` default colour |
-| `dwell` | Screen level: seconds this screen stays up in the rotation (default: the matrix's `dwell`) |
-| `thresholds` | List of `{above, colour}`, checked top to bottom; the first one the value reaches wins, so list the highest first |
-| `fill`, `fill_max` | Built-in icons only: fill the icon's fill area in proportion to the value (default max 100) |
-| `icon_colour` | Draw the icon outline in a fixed colour instead of the row colour |
+[Config docs](docs/screens/rows-and-grids.md): every option for this screen.
 
 ### Camera screens
 
@@ -157,7 +139,7 @@ A screen with `camera:` shows that camera's current still, scaled to the matrix 
 
 Camera screens need **Pillow**: on Home Assistant OS, add `Pillow` to the AppDaemon app's `python_packages` option and restart it. The app reaches Home Assistant through the Supervisor (no token needed); elsewhere, set `ha_url` and `ha_token` (a long-lived access token) on the app.
 
-At 64×64 you'll recognise the scene (a car on the drive, someone at the door), not faces.
+[Config docs](docs/screens/camera.md): every option for this screen.
 
 ### Aircraft screens
 
@@ -179,38 +161,7 @@ A screen with `aircraft:` shows the aircraft around a home point, from your own 
         # coastline: /config/coastline.geojson   # radar: coast outline to scale (see below)
 ```
 
-| Style | What it shows |
-|---|---|
-| `radar` | North up, home a white dot in the middle, rings (default at a quarter, half and all of `range_km`), each aircraft a small arrow **coloured by height** pointing the way it's flying (see `marker`); "interesting" aircraft get a box round them. The count in the top corner, the range at the bottom |
-| `nearest` | The closest aircraft: callsign, type (or a word like `HELICOPTER`) and route if known, distance in big digits with an arrow pointing to it, height and speed. The bottom line shows the next aircraft, one at a time (`page_seconds`, default 3) |
-| `board` | The four nearest, two lines each: callsign and route (or type), then distance, direction and height |
-| `alert` | A full-screen card with a flashing border for the most urgent **interesting** aircraft: the reason (`LOW FLYER`, `HELICOPTER`, `EMERGENCY`, `OVERHEAD`…), an aeroplane or helicopter icon, callsign, height, distance and direction. Shows `nearest` if nothing is interesting |
-
-**Data source** (one of):
-- `url`: an `aircraft.json` from readsb, tar1090 or dump1090-fa (read at most once a second, shared by all matrices). readsb-protobuf's own web page serves protobuf only; put tar1090 in front of it.
-- `entity` (and optionally `attribute`, default `aircraft`): a Home Assistant entity whose attribute is a list of readsb-style items (`hex`, `flight`, `lat`, `lon`, `alt_baro`, `track`, `gs`, `category`, `squawk`), optionally with `interesting` (a reason, or null), `route` (e.g. `LHR>JFK`) and `type` (e.g. `A320`). Use this when another app already reads your receiver and decides what's interesting, so the matrix and your dashboards agree.
-
-**"Interesting"**: an item's own `interesting` value if the source gives one; otherwise these rules (change them with `alert_rules`, or `alert_rules: false` to turn them off): squawk 7500/7600/7700 or a helicopter within `special_km` (50), below `low_ft` (5,000 ft) within `low_km` (20 km), or within `overhead_km` (5 km).
-
-| Option | Default | Meaning |
-|---|---|---|
-| `range_km` | 100 | Radar: distance from home to the edge |
-| `rings_km` | quarter, half, full range | Radar rings |
-| `coastline` | none | Radar: a GeoJSON file of coastlines (or any lines: LineString, MultiLineString, Polygon outlines, lon/lat) drawn to scale round home, so you can see where the aircraft are. E.g. clip [Natural Earth](https://www.naturalearthdata.com/)'s public-domain 1:10m coastline to your area; the file is read once |
-| `marker` | `arrow` | Radar: how each aircraft is drawn. `arrow`: a 5 × 5 arrowhead (bright head, dimmer shaft) snapped to the nearest of 8 headings. `line`: 5 pixels along the exact track, white nose, full-colour body and a fading tail; smaller, so better in a busy sky. `tick`: the old 2 × 2 dot with two dim pixels ahead. Aircraft with no track are a 2 × 2 dot |
-| `line_above` | 12 | Radar: with `marker: arrow`, switch to `line` while more than this many aircraft are on the radar, so a crowded sky stays readable. `0` turns this off |
-| `show_count`, `show_range` | true | Radar: the aircraft count and the range label |
-| `max_age` | 15 | Ignore aircraft whose last position is older than this (seconds) |
-| `page_seconds`, `ticker_count` | 3, 5 | Nearest: how long each other aircraft shows on the bottom line, and how many |
-| `flash` | true | Alert: flash the border once a second (never at night, see below) |
-| `altitude_colours` | orange < 5,000 ft, green < 20,000 ft, cyan < 33,000 ft, blue above | List of `{below: <feet>, colour: [r, g, b]}`, the last without `below` |
-| `colours` | | Override any of `ring`, `house`, `text`, `label`, `accent` (alert and highlights), `ticker`, `ground`, `marker`, `coast` |
-
-The box round an "interesting" aircraft is 7 × 7, drawn before the aircraft itself, so the arrow or line is never hidden under it.
-
-Tests: `python3 -m unittest discover tests` (plain Python, no Home Assistant needed).
-
-Positions update once a second (the receiver's rate), so dots and numbers move at the frame rate; there's no animation between frames.
+[Config docs](docs/screens/aircraft.md): every option for this screen.
 
 ### Power-flow screen
 
@@ -234,25 +185,7 @@ A screen with `power_flow:` shows where the power is going right now: the sun an
         # night_speed: 1             # comets' pixels a second during the night window
 ```
 
-| Part | Colours |
-|---|---|
-| Grid | red while importing, green while exporting, grey when idle |
-| Battery line | blue, comets towards the house when discharging and towards the battery when charging; the edge of the fill pulses |
-| Car line | always the car's colour (`ev`, light blue) |
-| Battery fill and % | `soc_thresholds` (default green from 30 %, orange from 20 %), else `soc_colour` (red) |
-| Anything under `idle_w` | grey, with a still, dark line |
-
-| Option | Default | Meaning |
-|---|---|---|
-| `solar`, `grid`, `battery`, `soc`, `load`, `ev` | | Entities (W, and % for `soc`); any can be left out. Unknown states show `-` |
-| `load_includes_ev` | false | Subtract the car from the load for the house figure (on Victron systems with the chargers on the inverter's AC output, `AC consumption` includes them) |
-| `max_kw` | 10 | Power at which the comets reach full speed (5 to 10 pixels a second: 1 to 2 pixels a frame at `frame_rate: 5`, so they never seem to run backwards) |
-| `night_speed` | 1 | Pixels a second the comets move during the `night` window (the screen is then drawn once every `refresh`); the battery pulse stands still |
-| `idle_w` | 50 | Below this a flow counts as idle and shows `0` |
-| `soc_thresholds`, `soc_colour` | see above | `[{above: <percent>, colour: [r, g, b]}, …]` and the colour under all of them |
-| `colours` | | Override any of `solar`, `import`, `export`, `battery`, `ev`, `house`, `idle`, `line`, `moon`, `outline` |
-
-**`frame_rate`** (any screen): frames per second while that screen is showing, on a separate faster timer; the rotation and every other screen keep to `refresh`. Without it the comets still move, but only once every `refresh`. During the `night` window it's ignored: the screen is drawn once every `refresh` and the power-flow comets creep along at `night_speed`. Each frame is a few milliseconds of pure Python, and DDP is one small UDP burst, so 5 frames a second on several matrices is light work.
+[Config docs](docs/screens/power-flow.md): every option for this screen.
 
 ### Weather screen
 
@@ -270,16 +203,7 @@ A screen with `weather:` shows today and tomorrow side by side: the day (today u
         wind_unit: mph              # mph | kmh | ms | kn
 ```
 
-| Option | Default | Meaning |
-|---|---|---|
-| `weather` | | The weather entity. The app calls its `weather.get_forecasts` action (a local Home Assistant call) |
-| `forecast_interval` | 900 | Seconds between forecast fetches (a minute after a failed one) |
-| `forecast_type` | `daily` | The forecast type to ask for |
-| `wind_unit` | `mph` | Unit the wind is shown in; the entity's own unit (`wind_speed_unit`) is converted |
-| `animate` | true | `false` for still icons |
-| `animation_speed` | 2 | Icon frames a second (there are 3) |
-
-Icons are drawn in code for sunny, clear night, partly cloudy, cloudy, fog, rain, snow and lightning; other conditions use the nearest. Rain is in millimetres (one decimal under 10 mm). The frame only changes with the icon's animation step and the forecast, so it's drawn once per step and reused. At night (the `night` window) the icons stand still.
+[Config docs](docs/screens/weather.md): every option for this screen.
 
 ### Tide screen
 
@@ -300,16 +224,7 @@ A screen with `tides:` shows high (▲) and low (▼) waters from an entity that
         layout: list                # list | curve
 ```
 
-| Option | Default | Meaning |
-|---|---|---|
-| `tides`, `attribute` | `predictions` | The entity and its attribute: a list of `[time, height]` pairs (as the [UKHO Tides](https://github.com/ianByrne/HASS-ukho_tides) integration gives, for ADMIRALTY's UK stations), or of dicts |
-| `time_key`, `height_key`, `type_key` | `time`, `height`, `type` | Field names when the items are dicts. A type like `HighWater`, `high` or `H` marks a high; without a type, highs and lows are worked out from the neighbouring heights |
-| `data_time_zone` | UTC | Time zone of times that don't carry one (UKHO Tides gives UTC). Times are shown in Home Assistant's time zone |
-| `label` | | Place name |
-| `layout` | `list` | `list` or `curve` |
-| `max_height` | highest tide + 10 % | Top of the curve, in metres |
-
-With no tides to come (entity missing or empty), the screen shows the label and `NO DATA`.
+[Config docs](docs/screens/tides.md): every option for this screen.
 
 ### Network screen
 
@@ -340,10 +255,7 @@ internet_alert:                   # shows only during a failover, for up to 60 s
   network: {style: alert, backup_active: binary_sensor.internet_on_starlink, links: [...same as above...]}
 ```
 
-`big`: the line's name and latency (green under 25 ms, amber under 60, red above) along the top, download in large
-blue digits, upload in orange, and a bar showing how full the main line is. On the backup line the name turns amber
-and "FTTP DOWN" flashes along the bottom. `alert`: a red flashing border, "FTTP DOWN", "ON STARLINK" and the backup's
-speeds. Without `backup_active`, the backup counts as in use whenever the main line has no data.
+[Config docs](docs/screens/network.md): every option for this screen.
 
 ### Stars screen
 
@@ -369,8 +281,7 @@ stars_alert:
   stars: {style: alert, alert: input_text.stars_alert, kids: [...same as above...]}
 ```
 
-A `+` shows a shooting star, WELL DONE and the name (a trophy and "7 STARS!" when the week is full); a `-` shows a
-calm grey STAR OFF.
+[Config docs](docs/screens/stars.md): every option for this screen.
 
 ### Aquarium screen
 
@@ -388,6 +299,8 @@ drift. At night it's drawn still.
       frame_rate: 5
       dwell: 15
 ```
+
+[Config docs](docs/screens/aquarium.md): every option for this screen.
 
 ### Jungle screen
 
@@ -408,6 +321,8 @@ gets a random look, side, speed and path. At night it's drawn still.
       dwell: 15
 ```
 
+[Config docs](docs/screens/jungle.md): every option for this screen.
+
 ### Platformer screen
 
 An auto-playing early-90s-style platform game: Rusty the fox runs through stages built from the seed, jumping gaps, bouncing on slimes and collecting gems and stars, with a score, a progress bar to the flag and a backdrop that changes from meadow to sunset, moonlight and snow. It needs no entities. At night it's drawn still.
@@ -422,6 +337,8 @@ An auto-playing early-90s-style platform game: Rusty the fox runs through stages
       dwell: 15
 ```
 
+[Config docs](docs/screens/platformer.md): every option for this screen.
+
 ### Blocks screen
 
 An auto-playing falling-block puzzle: four-square shapes fall into a well, a deliberately imperfect player turns and drops them, full rows flash and disappear, and a new game starts when the stack gets high. Shows the next shape, rows cleared and score. It needs no entities. At night it's drawn still.
@@ -435,6 +352,8 @@ An auto-playing falling-block puzzle: four-square shapes fall into a well, a del
       frame_rate: 5
       dwell: 15
 ```
+
+[Config docs](docs/screens/blocks.md): every option for this screen.
 
 ### Surf screen
 
@@ -462,6 +381,8 @@ The three wave styles (barrel, rolling, storm):
       dwell: 15
 ```
 
+[Config docs](docs/screens/surf.md): every option for this screen.
+
 ### Quest screen
 
 An auto-playing top-down adventure: Pip the lantern-mage crosses one-screen rooms (meadow, shore, vault), zaps crabs, bats, wisps and beetles with a staff, picks up coins, gems, potions and keys, and the screen scrolls to the next room. Shows energy crystals, the key and coins. It needs no entities. At night it's drawn still.
@@ -475,6 +396,8 @@ An auto-playing top-down adventure: Pip the lantern-mage crosses one-screen room
       frame_rate: 5
       dwell: 15
 ```
+
+[Config docs](docs/screens/quest.md): every option for this screen.
 
 ### Kart screen
 
@@ -490,6 +413,8 @@ An auto-playing kart race on a tilted track running to the horizon: six animal d
       dwell: 15
 ```
 
+[Config docs](docs/screens/kart.md): every option for this screen.
+
 ### Duel screen
 
 Two contenders, red and blue, battle with padded sticks on podiums in a lit TV-studio arena (spotlights, crowd, camera flashes) until one falls onto the crash mat and the winner celebrates; a scoreboard counts bouts. It needs no entities. At night it's drawn still.
@@ -503,6 +428,8 @@ Two contenders, red and blue, battle with padded sticks on podiums in a lit TV-s
       frame_rate: 5
       dwell: 15
 ```
+
+[Config docs](docs/screens/duel.md): every option for this screen.
 
 ### Conditional and priority screens
 
