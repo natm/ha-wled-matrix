@@ -306,7 +306,11 @@ class WledMatrix(Hass):
 
     def render(self, name, width, height, night):
         """Pixels for screen `name` (dimmed at night), or None when there's nothing to show yet (a camera)."""
-        pixels = self.screen_objects[name].render(width, height, night=night, t=time.monotonic(), now=self.now())
+        return self.render_pixels(self.screen_objects[name], width, height, night)
+
+    def render_pixels(self, screen, width, height, night):
+        """Pixels from a screen object (the live view's editor has ones outside the config), dimmed at night."""
+        pixels = screen.render(width, height, night=night, t=time.monotonic(), now=self.now())
         if pixels is None:
             return None
         dim = float((self.night or {}).get("brightness", 0.25)) if night else 1.0
