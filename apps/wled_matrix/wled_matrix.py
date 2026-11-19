@@ -39,25 +39,25 @@ import time
 
 from appdaemon.plugins.hass.hassapi import Hass
 
-from wm_aircraft import AircraftSource, normalise, render_aircraft
-from wm_fun_aquarium import render_aquarium
-from wm_fun_jungle import render_jungle
-from wm_fun_platformer import render_platformer
-from wm_fun_blocks import render_blocks
-from wm_fun_surf import render_surf
-from wm_fun_quest import render_quest
-from wm_fun_kart import render_kart
-from wm_fun_duel import render_duel
-from wm_camera import CameraSource
-from wm_ddp import DdpSender
-from wm_mdi import MdiIcons
-from wm_network import entities as network_entities, render_network
-from wm_stars import entities as stars_entities, render_stars
-from wm_power import entities as power_entities, render_power_flow
-from wm_render import items, render_screen
-from wm_tides import parse_events, render_tides
-from wm_web import PAGE, frame_bytes
-from wm_weather import animation_phase, render_weather
+from wm.screens.aircraft import AircraftSource, normalise, render_aircraft
+from wm.screens.fun.aquarium import render_aquarium
+from wm.screens.fun.jungle import render_jungle
+from wm.screens.fun.platformer import render_platformer
+from wm.screens.fun.blocks import render_blocks
+from wm.screens.fun.surf import render_surf
+from wm.screens.fun.quest import render_quest
+from wm.screens.fun.kart import render_kart
+from wm.screens.fun.duel import render_duel
+from wm.screens.camera import CameraSource
+from wm.utils.ddp import DdpSender
+from wm.utils.mdi import MdiIcons
+from wm.screens.network import entities as network_entities, render_network
+from wm.screens.stars import entities as stars_entities, render_stars
+from wm.screens.power import entities as power_entities, render_power_flow
+from wm.screens.items import items, render_screen
+from wm.screens.tides import parse_events, render_tides
+from wm.web import PAGE, frame_bytes
+from wm.screens.weather import animation_phase, render_weather
 
 try:
     from zoneinfo import ZoneInfo
