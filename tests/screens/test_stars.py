@@ -95,7 +95,7 @@ class RestartOn(unittest.TestCase):
             },
         }
         app.matrices = [{"host": "a", "screens": ["week", "pop"]}]
-        app.rng, app.args = random.Random(0), {}
+        app.rng, app.args, app.tz = random.Random(0), {}, None
         app.screen_objects = {n: build(app, n, s) for n, s in app.screens.items()}
         app.refresh = 1.0
         app.position, app.elapsed, app.interrupt, app.restart_sig = {"a": 0}, {"a": 0.0}, {}, {}

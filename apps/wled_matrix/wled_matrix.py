@@ -32,6 +32,7 @@ except ImportError:  # Python < 3.9
     ZoneInfo = None
 
 AUTO = "Auto"  # the input_select option that hands a matrix back to its rotation
+WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
 
 def slug(text):
@@ -43,8 +44,49 @@ def state_entity(m):
     return m.get("state_entity") or f"sensor.wled_matrix_{slug(m.get('name', m['host']))}"
 
 
-def matrix_state(m, showing, pinned, next_name, enabled):
-    """(state, attributes) for a matrix's sensor: the screen showing, else `idle` (nothing to show) or `off`."""
+def screen_names(m, today):
+    """The matrix's screen list for `today` (a date). A plain name stands for itself. A `daily` entry stands for one
+    screen a day, so one slot in the rotation changes daily: `{daily: [a, b, c]}` takes them in turn, and
+    `{daily: {monday: a, tuesday: b, ...}}` names the screen for each weekday."""
+    names = []
+    for entry in m["screens"]:
+        if isinstance(entry, dict):
+            choices = entry["daily"]
+            if isinstance(choices, dict):
+                names.append({str(k).lower(): v for k, v in choices.items()}[WEEKDAYS[today.weekday()]])
+            else:
+                names.append(choices[today.toordinal() % len(choices)])
+        else:
+            names.append(entry)
+    return names
+
+
+def check_screens(m, screens):
+    """Raise ValueError unless every entry of the matrix's screen list is a known screen, or a `daily` list of them,
+    or a `daily` mapping with a known screen for each of the seven weekdays."""
+    for entry in m["screens"]:
+        if isinstance(entry, dict):
+            forms = "a name, {daily: [names]} or {daily: {monday: name, ...}}"
+            where = f"matrix {m['host']}: a screen entry can be {forms}"
+            daily = entry.get("daily")
+            if list(entry) != ["daily"] or not isinstance(daily, (list, dict)) or not daily:
+                raise ValueError(f"{where}, not {entry!r}")
+            if isinstance(daily, dict):
+                if sorted(str(k).lower() for k in daily) != sorted(WEEKDAYS):
+                    raise ValueError(f"{where}; daily needs every weekday once, got {sorted(daily)}")
+                names = list(daily.values())
+            else:
+                names = daily
+        else:
+            names = [entry]
+        for name in names:
+            if name not in screens:
+                raise ValueError(f"matrix {m['host']}: unknown screen {name!r}")
+
+
+def matrix_state(m, showing, pinned, next_name, enabled, names=None):
+    """(state, attributes) for a matrix's sensor: the screen showing, else `idle` (nothing to show) or `off`.
+    `names` is the matrix's screen list for today (see screen_names)."""
     state = showing or ("idle" if enabled else "off")
     attributes = {
         "friendly_name": m.get("name", m["host"]),
@@ -52,7 +94,7 @@ def matrix_state(m, showing, pinned, next_name, enabled):
         "host": m["host"],
         "width": m.get("width", 64),
         "height": m.get("height", 64),
-        "screens": list(m["screens"]),
+        "screens": list(m["screens"] if names is None else names),
         "pinned": pinned,
         "next": next_name,
         "enabled": enabled,
@@ -72,9 +114,7 @@ class WledMatrix(Hass):
         self.rng = random.Random()  # draws the `{random: [low, high]}` config values
         self.shared_objects = {}  # see shared()
         for m in self.matrices:
-            for name in m["screens"]:
-                if name not in self.screens:
-                    raise ValueError(f"matrix {m['host']}: unknown screen {name!r}")
+            check_screens(m, self.screens)
         self.screen_objects = {name: build(self, name, screen) for name, screen in self.screens.items()}
         self.position = {m["host"]: 0 for m in self.matrices}
         self.elapsed = {m["host"]: 0.0 for m in self.matrices}
@@ -109,6 +149,10 @@ class WledMatrix(Hass):
 
     def matrix(self, host):
         return next(m for m in self.matrices if m["host"] == host)
+
+    def names(self, m):
+        """The matrix's screens today: `{daily: [...]}` entries resolved to one name (see screen_names)."""
+        return screen_names(m, self.now().date())
 
     def enabled(self, m):
         switch = m.get("enabled_entity")
@@ -180,11 +224,11 @@ class WledMatrix(Hass):
     def rotation(self, m):
         """Indices (into the matrix's screen list) of the screens in its rotation right now."""
         objects = self.screen_objects
-        return [i for i, n in enumerate(m["screens"]) if not objects[n].priority and objects[n].visible()]
+        return [i for i, n in enumerate(self.names(m)) if not objects[n].priority and objects[n].visible()]
 
     def dwell(self, m):
         """Seconds the current screen stays up."""
-        return self.screen_objects[m["screens"][self.position[m["host"]]]].dwell(m.get("dwell", 10))
+        return self.screen_objects[self.names(m)[self.position[m["host"]]]].dwell(m.get("dwell", 10))
 
     def next_screen(self, m):
         """The screen after the current one in the rotation, or None (pinned, or nothing to rotate to)."""
@@ -193,7 +237,7 @@ class WledMatrix(Hass):
         if host in self.pinned or len(rotation) < 2:
             return None
         later = [i for i in rotation if i > self.position[host]]
-        return m["screens"][later[0] if later else rotation[0]]
+        return self.names(m)[later[0] if later else rotation[0]]
 
     def remaining(self, m):
         """Seconds until the rotation moves on (0 when pinned)."""
@@ -202,7 +246,7 @@ class WledMatrix(Hass):
 
     def choose(self, m):
         """The screen to draw on matrix `m` now."""
-        host, names = m["host"], m["screens"]
+        host, names = m["host"], self.names(m)
         pinned = self.pinned.get(host)
         if pinned in self.screens:  # a pick from a dashboard or the live view beats everything else
             return pinned
@@ -246,7 +290,7 @@ class WledMatrix(Hass):
             "next": self.next_screen(m),
             "remaining": round(self.remaining(m), 1),
             "dwell": self.dwell(m),
-            "screens": list(m["screens"]),
+            "screens": self.names(m),
             "enabled": self.enabled(m),
             "select": m.get("select_entity"),
             "sensor": state_entity(m),
@@ -256,7 +300,9 @@ class WledMatrix(Hass):
         """Keep the matrix's sensor current: its state is the screen showing, else idle or off. Written on change."""
         host = m["host"]
         enabled = self.enabled(m)
-        current = matrix_state(m, showing, self.pinned.get(host), self.next_screen(m) if showing else None, enabled)
+        current = matrix_state(
+            m, showing, self.pinned.get(host), self.next_screen(m) if showing else None, enabled, self.names(m)
+        )
         if self.published.get(host) == current:
             return
         self.published[host] = current
