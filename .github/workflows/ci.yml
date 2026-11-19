@@ -17,7 +17,9 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python }}
-      # Plain Python: the tests need neither AppDaemon nor Home Assistant.
+      # Plain Python: the tests need neither AppDaemon nor Home Assistant. PyYAML (which AppDaemon ships) is for the
+      # live view's editor tests, which skip without it.
+      - run: pip install pyyaml
       - run: python -m unittest discover tests
 
   lint:

@@ -1,5 +1,6 @@
 """Rotation with pins, and the sensor per matrix. Run from the repo root: python3 -m unittest discover tests"""
 
+import datetime
 import os
 import random
 import sys
@@ -27,7 +28,7 @@ def app(matrices=None, states=None):
     a.screens = SCREENS
     a.matrices = matrices or [{"host": "a", "name": "Kitchen", "screens": ["energy", "radar", "weather"], "dwell": 10}]
     a.refresh = 1.0
-    a.rng, a.args = random.Random(0), {}
+    a.rng, a.args, a.tz = random.Random(0), {}, None
     a.screen_objects = {n: build(a, n, s) for n, s in a.screens.items()}
     a.position = {m["host"]: 0 for m in a.matrices}
     a.elapsed = {m["host"]: 0.0 for m in a.matrices}
@@ -81,6 +82,55 @@ class Pins(unittest.TestCase):
         self.assertEqual(len([c for c in a.calls if c[0] == "input_select/select_option"]), 0)  # no echo back
         a.on_select("input_select.k", "state", "radar", "Auto")
         self.assertEqual(a.pinned, {})
+
+
+class Daily(unittest.TestCase):
+    def test_one_of_the_list_a_day_in_turn(self):
+        m = {"host": "a", "screens": ["energy", {"daily": ["radar", "weather", "tides"]}]}
+        days = [datetime.date(2026, 11, 19) + datetime.timedelta(days=i) for i in range(4)]
+        picks = [wled_matrix.screen_names(m, d) for d in days]
+        self.assertEqual([p[0] for p in picks], ["energy"] * 4)
+        self.assertEqual(sorted(p[1] for p in picks[:3]), ["radar", "tides", "weather"])  # each once in three days
+        self.assertEqual(picks[3][1], picks[0][1])  # then round again
+        self.assertEqual(wled_matrix.screen_names(m, days[0]), picks[0])  # the same all day
+
+    def test_the_rotation_uses_todays_pick(self):
+        a = app([{"host": "a", "screens": [{"daily": ["radar", "weather"]}, "energy"], "dwell": 10}])
+        m = a.matrices[0]
+        today = a.names(m)[0]
+        self.assertIn(today, ("radar", "weather"))
+        self.assertEqual(a.choose(m), today)
+        self.assertEqual(a.next_screen(m), "energy")
+        self.assertEqual(a.matrix_status(m)["screens"], [today, "energy"])
+        a.draw = lambda m, name, night: None
+        a.is_night = lambda: False
+        a.tick({})
+        self.assertEqual(a.set_states[-1][2]["screens"], [today, "energy"])
+
+    def test_a_screen_per_weekday(self):
+        week = {"Monday": "energy", "tuesday": "radar", "wednesday": "weather", "thursday": "tides"}
+        week.update({"friday": "energy", "saturday": "radar", "sunday": "weather"})
+        m = {"host": "a", "screens": [{"daily": week}]}
+        wled_matrix.check_screens(m, SCREENS)
+        self.assertEqual(wled_matrix.screen_names(m, datetime.date(2026, 11, 18)), ["weather"])  # a Wednesday
+        self.assertEqual(wled_matrix.screen_names(m, datetime.date(2026, 11, 19)), ["tides"])
+        self.assertEqual(wled_matrix.screen_names(m, datetime.date(2026, 11, 23)), ["energy"])  # Monday, any case
+
+    def test_bad_entries_are_refused(self):
+        six_days = {d: "radar" for d in wled_matrix.WEEKDAYS[:6]}
+        for entry in (
+            {"daily": ["radar", "nope"]},
+            {"daily": []},
+            {"daily": "radar"},
+            {"weekly": ["radar"]},
+            {"daily": six_days},
+            {"daily": {**six_days, "sunday": "nope"}},
+            {"daily": {**six_days, "someday": "radar"}},
+            "nope",
+        ):
+            with self.subTest(entry=entry), self.assertRaises(ValueError):
+                wled_matrix.check_screens({"host": "a", "screens": ["energy", entry]}, SCREENS)
+        wled_matrix.check_screens({"host": "a", "screens": ["energy", {"daily": ["radar"]}]}, SCREENS)
 
 
 class NextAndRemaining(unittest.TestCase):

@@ -5,9 +5,13 @@
   /app/matrix_frame   raw RGB bytes, row by row (?mode=mirror&m=<index>, or ?mode=preview&screen=<name>&night=0|1)
   /app/matrix_pin     ?m=<index>&screen=<name>|Auto: show that screen on the matrix now (Auto: back to its rotation)
   /app/matrix_card    the dashboard card (a JavaScript module to add as a Home Assistant dashboard resource)
+  /app/matrix_yaml    ?screen=<name>: a configured screen as YAML; ?type=<key>: starting YAML for a screen type
+  /app/matrix_scratch ?yaml=<text>: build a screen from the editor's YAML, kept apart from the config -> {"id"};
+                      ?reroll=<id>: draw its {random: ...} values again. Preview it with matrix_frame ...&scratch=<id>
 
-The page has three views: Mirror (one matrix), Preview (any screen, drawn on demand) and All (every matrix with what
-it shows and a picker to pin a screen). `?view=all&embed=1` is the All view without the header, for a Webpage card.
+The page has three views: Mirror (one matrix), Preview (any screen, drawn on demand, with an editor: its YAML can be
+changed and run here, and screen types not in the config tried) and All (every matrix with what it shows and a picker
+to pin a screen). `?view=all&embed=1` is the All view without the header, for a Webpage card.
 Every response allows any origin (CORS), so the card can call these from a Home Assistant dashboard.
 
 Mirror shows the last frame actually sent to a matrix, so it runs at the matrix's own rate (about 1 frame a second
@@ -17,15 +21,108 @@ local; the page only reads.
 """
 
 import asyncio
+import hashlib
 import pathlib
 import time
 
+from .screens import Screen, build
+
+SCRATCH_TTL = 600  # seconds a screen made in the editor is kept after its last frame
 CARD = pathlib.Path(__file__).with_name("static") / "wled_matrix_card.js"
 CORS = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Expose-Headers": "X-Screen, X-Width, X-Height, X-Age-Ms",
     "Cache-Control": "no-store",
 }
+
+
+TEMPLATES = {  # starting YAML in the editor for a screen type; any other type gets `<key>:` and a pointer to its docs
+    "rows": "rows:\n  - icon: mdi:thermometer\n    entity: sensor.outside_temperature\n    format: decimal1\n    unit: C\n"
+    "  - icon: mdi:power-plug\n    entity: sensor.house_load_power\n    format: power\n",
+    "camera": "camera: camera.front_door   # a camera entity\nfit: crop                   # crop or letterbox\ndwell: 15\n",
+}
+
+
+def types():
+    """The screen types the editor offers: `rows` (the default screen) and every registered key."""
+    return ["rows", *sorted(Screen.registry)]
+
+
+def template(key):
+    """Starting YAML for the editor when a screen type is picked rather than a configured screen."""
+    if key in TEMPLATES:
+        return TEMPLATES[key]
+    return f"{key}:\n  # options: see docs/screens/{key.replace('_', '-')}.md\nframe_rate: 5\ndwell: 15\n"
+
+
+def parse_screen(text):
+    """A screen config from the editor's YAML: one entry as written under `screens:` in apps.yaml."""
+    import yaml  # AppDaemon depends on PyYAML; imported here so the rest of the module needs nothing extra
+
+    try:
+        screen = yaml.safe_load(text or "")
+    except yaml.YAMLError as err:
+        raise ValueError(f"not valid YAML: {err}") from None
+    if not isinstance(screen, dict) or not screen:
+        raise ValueError(
+            "the screen must be a mapping, as one entry under `screens:` in apps.yaml (e.g. `aquarium: {}`)"
+        )
+    if mentions(screen, "coastline"):
+        raise ValueError("`coastline` (a file on the server) can't be used from the editor")
+    return screen
+
+
+def mentions(value, key):
+    """True if `key` appears as a mapping key anywhere in `value`."""
+    if isinstance(value, dict):
+        return key in value or any(mentions(v, key) for v in value.values())
+    return isinstance(value, list) and any(mentions(v, key) for v in value)
+
+
+def screen_yaml(screen):
+    """A configured screen as YAML for the editor, in the order it was written, placeholders and all."""
+    import yaml  # see parse_screen
+
+    return yaml.safe_dump(screen, sort_keys=False, allow_unicode=True)
+
+
+class Scratch:
+    """Screens built from YAML typed into the live view, kept apart from the configured ones: never in a rotation,
+    never started, dropped SCRATCH_TTL seconds after their last use. The same text gives the same id, so the page can
+    keep asking for frames while the user reads them, and a rebuild happens only when the text changes."""
+
+    def __init__(self, host, ttl=SCRATCH_TTL, clock=time.monotonic):
+        self.host, self.ttl, self.clock = host, ttl, clock
+        self.items = {}  # id -> [last used, Screen]
+
+    def add(self, text):
+        """Build (or reuse) the screen for `text`; returns its id. Raises ValueError for YAML or config problems."""
+        screen = parse_screen(text)
+        key = hashlib.sha1(text.encode()).hexdigest()[:12]
+        if key not in self.items:
+            self.items[key] = [self.clock(), build(self.host, "editor", screen)]
+        self.items[key][0] = self.clock()
+        self.expire()
+        return key
+
+    def get(self, key):
+        item = self.items.get(key)
+        if item is None:
+            return None
+        item[0] = self.clock()
+        return item[1]
+
+    def reroll(self, key):
+        """Draw the screen's `{random: ...}` values again, as a new visit would."""
+        screen = self.get(key)
+        if screen is not None:
+            screen.on_show()
+        return screen
+
+    def expire(self):
+        now = self.clock()
+        for key in [k for k, (used, _) in self.items.items() if now - used > self.ttl]:
+            del self.items[key]
 
 
 def headers(**extra):
@@ -56,7 +153,7 @@ def info(matrices, mirror, screens, now, status=None):
                 **(status(m) if status else {}),
             }
         )
-    return {"matrices": rows, "screens": sorted(screens)}
+    return {"matrices": rows, "screens": sorted(screens), "types": types()}
 
 
 class LiveView:
@@ -66,6 +163,7 @@ class LiveView:
 
     def __init__(self, app):
         self.app = app
+        self.scratch = Scratch(app)
 
     def register(self):
         self.app.register_route(self.page, "matrix")
@@ -73,7 +171,41 @@ class LiveView:
         self.app.register_route(self.frame, "matrix_frame")
         self.app.register_route(self.pin, "matrix_pin")
         self.app.register_route(self.card, "matrix_card")
+        self.app.register_route(self.yaml, "matrix_yaml")
+        self.app.register_route(self.scratch_route, "matrix_scratch")
         self.app.log("Live view: /app/matrix on AppDaemon's web server")
+
+    async def yaml(self, request, kwargs):
+        """?screen=<name>: that configured screen as YAML; ?type=<key>: starting YAML for a screen type."""
+        from aiohttp import web  # AppDaemon ships aiohttp; imported here so tests run without it
+
+        q = request.query
+        if q.get("screen") is not None:
+            if q["screen"] not in self.app.screens:
+                return web.Response(status=404, text="unknown screen", headers=headers())
+            return web.Response(
+                text=screen_yaml(self.app.screens[q["screen"]]), content_type="text/plain", headers=headers()
+            )
+        if q.get("type") not in types():
+            return web.Response(status=404, text="unknown screen type", headers=headers())
+        return web.Response(text=template(q["type"]), content_type="text/plain", headers=headers())
+
+    async def scratch_route(self, request, kwargs):
+        """?yaml=<text>: build a screen from the editor's YAML -> {"id"}; ?reroll=<id>: draw its random values again."""
+        from aiohttp import web  # AppDaemon ships aiohttp; imported here so tests run without it
+
+        q = request.query
+        if q.get("reroll"):
+            if self.scratch.reroll(q["reroll"]) is None:
+                return web.Response(status=404, text="that screen has expired: press Run again", headers=headers())
+            return web.json_response({"id": q["reroll"]}, headers=headers())
+        try:
+            key = self.scratch.add(q.get("yaml", ""))
+        except ValueError as err:
+            return web.Response(status=400, text=str(err), headers=headers())
+        except Exception as err:  # a screen type rejecting its config
+            return web.Response(status=400, text=f"can't build the screen: {err!r}", headers=headers())
+        return web.json_response({"id": key}, headers=headers())
 
     async def page(self, request, kwargs):
         from aiohttp import web  # AppDaemon ships aiohttp; imported here so tests run without it
@@ -115,13 +247,23 @@ class LiveView:
 
         q = request.query
         if q.get("mode") == "preview":
-            name = q.get("screen")
-            if name not in self.app.screens:
-                return web.Response(status=404, text="unknown screen", headers=headers())
             w, h = int(q.get("w", 64)), int(q.get("h", 64))
             night = q.get("night") == "1"
             loop = asyncio.get_running_loop()
-            pixels = await loop.run_in_executor(None, self.app.render, name, w, h, night)
+            if q.get("scratch"):  # a screen from the editor
+                screen = self.scratch.get(q["scratch"])
+                if screen is None:
+                    return web.Response(status=404, text="that screen has expired: press Run again", headers=headers())
+                name = "editor"
+                try:
+                    pixels = await loop.run_in_executor(None, self.app.render_pixels, screen, w, h, night)
+                except Exception as err:  # the editor's config is the user's draft: show the error, don't log a trace
+                    return web.Response(status=400, text=f"can't draw it: {err!r}", headers=headers())
+            else:
+                name = q.get("screen")
+                if name not in self.app.screens:
+                    return web.Response(status=404, text="unknown screen", headers=headers())
+                pixels = await loop.run_in_executor(None, self.app.render, name, w, h, night)
             if pixels is None:
                 pixels = [(0, 0, 0)] * (w * h)
             return web.Response(
@@ -174,6 +316,12 @@ PAGE = r"""<!doctype html>
   .tile .row .state { color: var(--dim); text-align: right; }
   .tile.pinned .row .state { color: var(--accent); }
   .tile select { width: 100%; min-height: 32px; padding: 4px 8px; }
+  .editor { width: 100%; max-width: 640px; display: flex; flex-direction: column; gap: 8px; }
+  .ebar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .ebar .grow { flex: 1; color: var(--dim); font-size: 13px; }
+  textarea { width: 100%; min-height: 160px; resize: vertical; font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: #111114; color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+  #estatus { font-size: 13px; color: var(--dim); min-height: 18px; }
+  #estatus.err { color: #ff7a7a; }
   .embed header { display: none; }
   .embed main { padding: 8px; }
   .hidden { display: none !important; }
@@ -197,13 +345,25 @@ PAGE = r"""<!doctype html>
   <canvas id="c" width="640" height="640" aria-label="Matrix picture"></canvas>
   <div id="all" class="tiles hidden"></div>
   <div id="status">Connecting…</div>
+  <section id="editor" class="editor hidden" aria-label="Screen editor">
+    <div class="ebar">
+      <span class="grow" id="etitle">YAML</span>
+      <button id="run" type="button" title="Draw this YAML here; the panel is unchanged">Run</button>
+      <button id="reroll" type="button" title="Draw the {random: ...} values again">Reroll</button>
+      <button id="reset" type="button" title="Back to the YAML as loaded">Reset</button>
+    </div>
+    <textarea id="yaml" spellcheck="false" aria-label="Screen YAML"></textarea>
+    <div id="estatus"></div>
+  </section>
 </main>
 <script>
 const $ = (id) => document.getElementById(id);
 const base = location.pathname.replace(/\/matrix\/?$/, "");
 const params = new URLSearchParams(location.search);
 let mode = "mirror", info = null, frames = 0, fpsShown = 0, tick = performance.now();
+let scratchId = null, loadedFor = null, dirty = false;  // the editor: a screen built from its YAML, apart from the config
 if (params.get("embed") === "1") document.body.classList.add("embed");
+const isType = (v) => v.startsWith("type:");
 
 function setMode(m) {
   mode = m;
@@ -212,12 +372,51 @@ function setMode(m) {
   for (const id of ["lScreen", "lFps", "lNight"]) $(id).classList.toggle("hidden", m !== "preview");
   $("c").classList.toggle("hidden", m === "all");
   $("all").classList.toggle("hidden", m !== "all");
+  $("editor").classList.toggle("hidden", m !== "preview");
   save();
+  if (m === "preview" && info && loadedFor !== $("screen").value) loadYaml();
 }
 $("mMirror").onclick = () => setMode("mirror");
 $("mPreview").onclick = () => setMode("preview");
 $("mAll").onclick = () => setMode("all");
-for (const id of ["matrix", "screen", "fps", "night", "look"]) $(id).onchange = save;
+for (const id of ["matrix", "fps", "night", "look"]) $(id).onchange = save;
+$("screen").onchange = () => { save(); loadYaml(); };
+
+function estatus(text, err) { $("estatus").textContent = text; $("estatus").classList.toggle("err", !!err); }
+
+async function loadYaml() {
+  const v = $("screen").value;
+  if (!v) return;
+  const url = isType(v) ? `${base}/matrix_yaml?type=${encodeURIComponent(v.slice(5))}` : `${base}/matrix_yaml?screen=${encodeURIComponent(v)}`;
+  try {
+    const r = await fetch(url, { cache: "no-store" });
+    if (!r.ok) { estatus(`Can't load YAML: ${await r.text()}`, true); return; }
+    $("yaml").value = await r.text();
+    loadedFor = v; scratchId = null; dirty = false;
+    if (isType(v)) { $("etitle").textContent = `Screen type ${v.slice(5)}: not in your config`; await run(); }
+    else { $("etitle").textContent = `${v}: as configured`; estatus("Live from your config. Edit and press Run to try changes here; the panel is unchanged."); }
+  } catch (e) { estatus("Can't reach AppDaemon: " + e, true); }
+}
+
+async function run() {
+  try {
+    const r = await fetch(`${base}/matrix_scratch?yaml=${encodeURIComponent($("yaml").value)}`, { cache: "no-store" });
+    if (!r.ok) { estatus(await r.text(), true); return; }
+    scratchId = (await r.json()).id; dirty = false;
+    estatus("Running your YAML here; the panel is unchanged. Copy it into apps.yaml under screens: to keep it.");
+  } catch (e) { estatus("Can't reach AppDaemon: " + e, true); }
+}
+
+async function reroll() {
+  if (!scratchId) { estatus("Press Run first.", true); return; }
+  const r = await fetch(`${base}/matrix_scratch?reroll=${scratchId}`, { cache: "no-store" });
+  if (!r.ok) { scratchId = null; await run(); }
+}
+
+$("run").onclick = run;
+$("reroll").onclick = reroll;
+$("reset").onclick = loadYaml;
+$("yaml").oninput = () => { dirty = true; estatus("Edited: press Run to draw it."); };
 
 function save() {
   try { localStorage.setItem("matrixView", JSON.stringify({ mode, matrix: $("matrix").value, screen: $("screen").value,
@@ -299,9 +498,11 @@ async function loadInfo() {
   info = fresh;
   const keepM = $("matrix").value, keepS = $("screen").value;
   $("matrix").innerHTML = info.matrices.map((m) => `<option value="${m.id}">${m.name}</option>`).join("");
-  $("screen").innerHTML = info.screens.map((s) => `<option>${s}</option>`).join("");
+  $("screen").innerHTML = `<optgroup label="Configured">${info.screens.map((s) => `<option>${s}</option>`).join("")}</optgroup>`
+    + `<optgroup label="Screen types (not in your config)">${(info.types || []).map((t) => `<option value="type:${t}">${t}</option>`).join("")}</optgroup>`;
   if (keepM) $("matrix").value = keepM;
   if (keepS) $("screen").value = keepS;
+  if (!$("screen").value && info.screens.length) $("screen").value = info.screens[0];
   if (rebuild) buildTiles();
   updateTiles();
 }
@@ -329,20 +530,25 @@ async function step() {
       let url;
       if (mode === "mirror") url = `${base}/matrix_frame?mode=mirror&m=${$("matrix").value}`;
       else {
-        url = `${base}/matrix_frame?mode=preview&screen=${encodeURIComponent($("screen").value)}&night=${$("night").checked ? 1 : 0}`;
         wait = 1000 / Number($("fps").value);
+        const night = $("night").checked ? 1 : 0;
+        if (scratchId) url = `${base}/matrix_frame?mode=preview&scratch=${scratchId}&night=${night}`;
+        else if (isType($("screen").value)) { $("status").textContent = "Press Run to draw the YAML below"; setTimeout(step, 500); return; }
+        else url = `${base}/matrix_frame?mode=preview&screen=${encodeURIComponent($("screen").value)}&night=${night}`;
       }
       const r = await fetchFrame(url, $("c"), 10);
       if (r.status === 204) { $("status").textContent = "Nothing sent to this matrix yet (off, or nothing to show)"; }
+      else if (r.status === 404 && scratchId) { scratchId = null; await run(); }
       else if (!r.ok) { $("status").textContent = `Error ${r.status}: ${await r.text()}`; wait = 2000; }
       else {
         frames++;
         const now = performance.now();
         if (now - tick >= 1000) { fpsShown = frames * 1000 / (now - tick); frames = 0; tick = now; }
         const age = r.headers.get("X-Age-Ms");
+        const shown = scratchId ? `your YAML${dirty ? " (edited, not run)" : ""}` : r.headers.get("X-Screen");
         $("status").textContent = mode === "mirror"
           ? `${info.matrices[$("matrix").value].name}: ${r.headers.get("X-Screen")} · frame sent ${age} ms ago`
-          : `Preview: ${r.headers.get("X-Screen")}${$("night").checked ? " (night)" : ""} · ${fpsShown.toFixed(1)} fps`;
+          : `Preview: ${shown}${$("night").checked ? " (night)" : ""} · ${fpsShown.toFixed(1)} fps`;
       }
     }
   } catch (e) { $("status").textContent = "Can't reach AppDaemon: " + e; wait = 2000; }
@@ -352,6 +558,7 @@ async function step() {
 (async () => {
   try { await loadInfo(); } catch (e) { $("status").textContent = "Can't load matrix list: " + e; }
   restore();
+  if (mode === "preview") loadYaml();
   setInterval(() => loadInfo().catch(() => {}), 5000);
   step();
 })();
