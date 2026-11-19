@@ -5,12 +5,18 @@ it as live data; if the app stops, WLED goes back to its own effect or preset af
 be conditional (`show_if`), a priority interrupt (`priority`, `max_time`, `restart_on`), animated (`frame_rate`) and
 dimmed in a `night` window. With `web: true` the matrices can be watched and previewed in a browser.
 
+Each matrix has a sensor in Home Assistant whose state is the screen showing (`sensor.wled_matrix_<name>`, or
+`state_entity`), and can be pinned to one screen from a dashboard or the live view: give it a `select_entity`
+(an input_select helper) and the app fills its options with `Auto` and every screen; choosing one shows it until
+`Auto` is chosen again.
+
 The screen types themselves (what `aircraft:`, `weather:`, `rows:` and the rest draw) live in wm/screens/, one module
 each; this file only runs the rotation and the timers. See README.md for the configuration.
 """
 
 import datetime
 import random
+import re
 import time
 
 from appdaemon.plugins.hass.hassapi import Hass
@@ -24,6 +30,34 @@ try:
     from zoneinfo import ZoneInfo
 except ImportError:  # Python < 3.9
     ZoneInfo = None
+
+AUTO = "Auto"  # the input_select option that hands a matrix back to its rotation
+
+
+def slug(text):
+    return re.sub(r"[^a-z0-9]+", "_", str(text).lower()).strip("_")
+
+
+def state_entity(m):
+    """The matrix's sensor: `state_entity`, else sensor.wled_matrix_<name> (or <host>)."""
+    return m.get("state_entity") or f"sensor.wled_matrix_{slug(m.get('name', m['host']))}"
+
+
+def matrix_state(m, showing, pinned, next_name, enabled):
+    """(state, attributes) for a matrix's sensor: the screen showing, else `idle` (nothing to show) or `off`."""
+    state = showing or ("idle" if enabled else "off")
+    attributes = {
+        "friendly_name": m.get("name", m["host"]),
+        "icon": "mdi:dots-grid",
+        "host": m["host"],
+        "width": m.get("width", 64),
+        "height": m.get("height", 64),
+        "screens": list(m["screens"]),
+        "pinned": pinned,
+        "next": next_name,
+        "enabled": enabled,
+    }
+    return state, attributes
 
 
 class WledMatrix(Hass):
@@ -46,10 +80,16 @@ class WledMatrix(Hass):
         self.elapsed = {m["host"]: 0.0 for m in self.matrices}
         self.interrupt = {}  # (host, screen) -> time the priority screen came up
         self.restart_sig = {}  # (host, screen) -> states of its `restart_on` entities when last checked
+        self.pinned = {}  # host -> screen shown instead of the rotation (see pin())
+        self.published = {}  # host -> (state, attributes) last written to the matrix's sensor
+        self.selects = {}  # input_select entity -> host of the matrix it pins
         self.tz = self.home_timezone()
         self.showing = {}  # host -> screen name drawn last
         self.last_draw = {}  # host -> monotonic time of the last frame sent
         self.mirror = {}  # host -> (monotonic time sent, screen name, pixels): the web page's mirror view
+        for m in self.matrices:
+            if m.get("select_entity"):
+                self.setup_select(m)
         if self.args.get("web"):  # a live view at http://<appdaemon>:5050/app/matrix (AppDaemon's web server)
             LiveView(self).register()
         for screen in self.screen_objects.values():
@@ -67,9 +107,48 @@ class WledMatrix(Hass):
             self.shared_objects[key] = factory()
         return self.shared_objects[key]
 
+    def matrix(self, host):
+        return next(m for m in self.matrices if m["host"] == host)
+
     def enabled(self, m):
         switch = m.get("enabled_entity")
         return switch is None or self.get_state(switch) == "on"
+
+    # ---------- pinning a screen from Home Assistant or the live view ----------
+    def setup_select(self, m):
+        """`select_entity`: an input_select helper whose options become Auto + every screen; picking one pins it."""
+        entity, host = m["select_entity"], m["host"]
+        self.selects[entity] = host
+        try:
+            self.call_service("input_select/set_options", entity_id=entity, options=[AUTO, *sorted(self.screens)])
+        except Exception as err:
+            self.log(f"{entity}: can't set its options: {err}", level="WARNING")
+        current = self.get_state(entity)
+        if current in self.screens:
+            self.pinned[host] = current
+        self.listen_state(self.on_select, entity)
+
+    def on_select(self, entity, attribute, old, new, **kwargs):
+        host = self.selects.get(entity)
+        if host is not None and new != old:
+            self.pin(host, None if new in (None, AUTO) else new, sync=False)
+
+    def pin(self, host, name, sync=True):
+        """Show screen `name` on matrix `host` from the next frame, instead of its rotation, until pinned to None
+        (Auto). With `sync`, the matrix's input_select (if any) is set to match."""
+        if name is not None and name not in self.screens:
+            raise ValueError(f"unknown screen {name!r}")
+        m = self.matrix(host)
+        if name is None:
+            self.pinned.pop(host, None)
+        else:
+            self.pinned[host] = name
+        self.elapsed[host] = 0.0
+        if sync and m.get("select_entity"):
+            try:
+                self.call_service("input_select/select_option", entity_id=m["select_entity"], option=name or AUTO)
+            except Exception as err:
+                self.log(f"{m['select_entity']}: can't select {name or AUTO}: {err}", level="WARNING")
 
     # ---------- time and night ----------
     def home_timezone(self):
@@ -98,9 +177,35 @@ class WledMatrix(Hass):
         return start <= now or now < end if start > end else start <= now < end
 
     # ---------- which screen ----------
+    def rotation(self, m):
+        """Indices (into the matrix's screen list) of the screens in its rotation right now."""
+        objects = self.screen_objects
+        return [i for i, n in enumerate(m["screens"]) if not objects[n].priority and objects[n].visible()]
+
+    def dwell(self, m):
+        """Seconds the current screen stays up."""
+        return self.screen_objects[m["screens"][self.position[m["host"]]]].dwell(m.get("dwell", 10))
+
+    def next_screen(self, m):
+        """The screen after the current one in the rotation, or None (pinned, or nothing to rotate to)."""
+        host = m["host"]
+        rotation = self.rotation(m)
+        if host in self.pinned or len(rotation) < 2:
+            return None
+        later = [i for i in rotation if i > self.position[host]]
+        return m["screens"][later[0] if later else rotation[0]]
+
+    def remaining(self, m):
+        """Seconds until the rotation moves on (0 when pinned)."""
+        host = m["host"]
+        return 0.0 if host in self.pinned else max(0.0, self.dwell(m) - self.elapsed[host])
+
     def choose(self, m):
         """The screen to draw on matrix `m` now."""
         host, names = m["host"], m["screens"]
+        pinned = self.pinned.get(host)
+        if pinned in self.screens:  # a pick from a dashboard or the live view beats everything else
+            return pinned
         now = time.monotonic()
         for name in names:  # priority screens interrupt while their entity is on, for at most max_time
             screen = self.screen_objects[name]
@@ -121,36 +226,59 @@ class WledMatrix(Hass):
             else:
                 self.interrupt.pop(key, None)  # off again: it may interrupt next time it comes on
                 self.restart_sig.pop(key, None)
-        rotation = [
-            i for i, n in enumerate(names) if not self.screen_objects[n].priority and self.screen_objects[n].visible()
-        ]
+        rotation = self.rotation(m)
         if not rotation:
             return None
         self.elapsed[host] += self.refresh
         current = self.position[host]
-        dwell = self.screen_objects[names[current]].dwell(m.get("dwell", 10))
-        if current not in rotation or (len(rotation) > 1 and self.elapsed[host] >= dwell):
+        if current not in rotation or (len(rotation) > 1 and self.elapsed[host] >= self.dwell(m)):
             self.elapsed[host] = 0.0
             later = [i for i in rotation if i > current]
             self.position[host] = later[0] if later else rotation[0]
         return names[self.position[host]]
+
+    # ---------- the matrix's sensor in Home Assistant ----------
+    def matrix_status(self, m):
+        """What the live view and the dashboard card show about a matrix, beyond the frame itself."""
+        host = m["host"]
+        return {
+            "pinned": self.pinned.get(host),
+            "next": self.next_screen(m),
+            "remaining": round(self.remaining(m), 1),
+            "dwell": self.dwell(m),
+            "screens": list(m["screens"]),
+            "enabled": self.enabled(m),
+            "select": m.get("select_entity"),
+            "sensor": state_entity(m),
+        }
+
+    def publish(self, m, showing):
+        """Keep the matrix's sensor current: its state is the screen showing, else idle or off. Written on change."""
+        host = m["host"]
+        enabled = self.enabled(m)
+        current = matrix_state(m, showing, self.pinned.get(host), self.next_screen(m) if showing else None, enabled)
+        if self.published.get(host) == current:
+            return
+        self.published[host] = current
+        try:
+            self.set_state(state_entity(m), state=current[0], attributes=current[1])
+        except Exception as err:
+            self.log(f"{host}: can't update {state_entity(m)}: {err}", level="WARNING")
 
     # ---------- drawing ----------
     def tick(self, kwargs):
         night = self.is_night()
         for m in self.matrices:
             host = m["host"]
-            if not self.enabled(m):
-                self.showing.pop(host, None)
-                continue
-            name = self.choose(m)
+            name = self.choose(m) if self.enabled(m) else None
             if name is None:
-                self.showing.pop(host, None)
-                continue  # nothing to show: WLED falls back to its own effect after its timeout
-            if self.showing.get(host) != name:
-                self.screen_objects[name].on_show()  # a new visit: `{random: ...}` config values are drawn again
-            self.showing[host] = name
-            self.draw(m, name, night)
+                self.showing.pop(host, None)  # nothing to show: WLED falls back to its own effect after its timeout
+            else:
+                if self.showing.get(host) != name:
+                    self.screen_objects[name].on_show()  # a new visit: `{random: ...}` config values are drawn again
+                self.showing[host] = name
+                self.draw(m, name, night)
+            self.publish(m, name)
 
     def fast_tick(self, kwargs):
         """Extra frames for a showing screen with `frame_rate` (not at night); the rotation stays on `tick`."""

@@ -99,6 +99,7 @@ class RestartOn(unittest.TestCase):
         app.screen_objects = {n: build(app, n, s) for n, s in app.screens.items()}
         app.refresh = 1.0
         app.position, app.elapsed, app.interrupt, app.restart_sig = {"a": 0}, {"a": 0.0}, {}, {}
+        app.pinned = {}
         app.states = {"input_boolean.on": "on", "counter.w": "1"}
         app.get_state = lambda e, **kw: app.states.get(e)
         return app
