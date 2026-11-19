@@ -9,7 +9,8 @@ and the animation is smooth at any `frame_rate`. At night the jungle is drawn st
 
 import math
 
-from ...utils.canvas import Canvas
+from ...utils.canvas import Canvas, scale
+from ...utils.noise import rand
 from ..base import Screen
 
 EYE = (10, 10, 20)
@@ -187,21 +188,6 @@ BOUGH = ((150, 96, 44), (112, 68, 30), (74, 44, 20))
 FERN = ((20, 190, 60), (0, 135, 40), (110, 220, 50))
 FLOWERS = ((255, 60, 150), (255, 220, 0), (255, 70, 30), (200, 90, 255))
 BUTTERFLY = ((255, 235, 60), (90, 200, 255), (255, 130, 220), (255, 150, 30))
-
-
-def scale(colour, k):
-    return tuple(min(255, int(v * k)) for v in colour)
-
-
-def rand(*key):
-    """A repeatable pseudo-random number in [0, 1) for `key`, so a frame depends only on the time."""
-    h = 2166136261
-    for part in key:
-        for ch in str(part):
-            h = ((h ^ ord(ch)) * 16777619) & 0xFFFFFFFF
-    h ^= h >> 13
-    h = (h * 0x5BD1E995) & 0xFFFFFFFF
-    return (h ^ (h >> 15)) / 4294967296.0
 
 
 def pick(items, r):

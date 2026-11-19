@@ -13,13 +13,10 @@ falls, mist drifts); at night the app draws a still frame once a second.
 import datetime
 import math
 
-from ..utils.canvas import Canvas
-from ..utils.text import TINY, draw_text, text_width
+from ..utils.canvas import GREY, Canvas
+from ..utils.text import DAY_NAMES, TINY, draw_text, text_width
 from .base import Screen
 
-DAY_NAMES = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
-
-GREY = (120, 120, 120)
 WHITE = (215, 215, 215)
 DIVIDER = (28, 28, 28)
 UNDERLINE = (0, 110, 160)

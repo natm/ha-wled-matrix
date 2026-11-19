@@ -8,7 +8,8 @@ Pure Python, no dependencies. Everything is a function of the time `t` (seconds)
 
 import math
 
-from ...utils.canvas import Canvas
+from ...utils.canvas import Canvas, scale
+from ...utils.noise import rand
 from ..base import Screen
 
 # Fish sprites, facing right. Letters pick a colour from the fish's palette: b body, s stripe/second colour,
@@ -76,10 +77,6 @@ def water(y, height):
     return (0, int(70 - 50 * k), int(140 - 90 * k))
 
 
-def scale(colour, k):
-    return tuple(int(v * k) for v in colour)
-
-
 def draw_sprite(c, rows, palette, x0, y0, direction, wag):
     width = len(rows[0])
     for gy, row in enumerate(rows):
@@ -93,17 +90,6 @@ def draw_sprite(c, rows, palette, x0, y0, direction, wag):
             colour = EYE if ch == "e" else palette.get(ch, palette["b"])
             x = x0 + (gx if direction > 0 else width - 1 - gx)
             c.put(x, y0 + gy2, colour)
-
-
-def rand(*key):
-    """A repeatable pseudo-random number in [0, 1) for `key`, so a frame depends only on the time."""
-    h = 2166136261
-    for part in key:
-        for ch in str(part):
-            h = ((h ^ ord(ch)) * 16777619) & 0xFFFFFFFF
-    h ^= h >> 13
-    h = (h * 0x5BD1E995) & 0xFFFFFFFF
-    return (h ^ (h >> 15)) / 4294967296.0
 
 
 def visit(i, slot, seed):

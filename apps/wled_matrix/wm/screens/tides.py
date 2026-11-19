@@ -19,8 +19,8 @@ Pure Python, no dependencies.
 import datetime
 import math
 
-from ..utils.canvas import Canvas
-from ..utils.text import TEXT, TINY, draw_text, text_width
+from ..utils.canvas import GREY, Canvas, scale
+from ..utils.text import DAY_NAMES, TEXT, TINY, draw_text, text_width
 from .base import Screen
 
 try:
@@ -28,9 +28,7 @@ try:
 except ImportError:  # Python < 3.9
     ZoneInfo = None
 
-DAY_NAMES = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
 
-GREY = (120, 120, 120)
 DIM = (80, 80, 80)
 WHITE = (215, 215, 215)
 HIGH = (0, 200, 255)  # high water: cyan
@@ -107,10 +105,6 @@ def hhmm(when, zone):
 def countdown(delta):
     mins = max(0, int(round(delta.total_seconds() / 60)))
     return f"IN {mins // 60}H{mins % 60:02d}"
-
-
-def scale(colour, k):
-    return tuple(max(0, min(255, int(v * k))) for v in colour)
 
 
 class TideCanvas(Canvas):

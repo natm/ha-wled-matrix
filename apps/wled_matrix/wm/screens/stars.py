@@ -11,7 +11,7 @@ Two styles (choose with `style`):
 Pure Python, no dependencies; `t` is a time in seconds (the twinkles), still at night.
 """
 
-from ..utils.canvas import TextCanvas
+from ..utils.canvas import GREY, TextCanvas
 from ..utils.text import TEXT, TINY, text_width
 from ..utils.values import to_number
 from .base import Screen
@@ -19,7 +19,6 @@ from .base import Screen
 GOLD = (255, 200, 0)
 DIM = (55, 45, 20)
 WHITE = (230, 230, 230)
-GREY = (120, 120, 120)
 DEFAULT_COLOUR = (230, 230, 230)
 
 

@@ -16,7 +16,8 @@ cfg keys: `seed` (default 0): a different run of stages.
 import math
 from bisect import bisect_right
 
-from ...utils.canvas import Canvas
+from ...utils.canvas import Canvas, scale
+from ...utils.noise import rand
 from ..base import Screen
 
 SPEED = 22.0  # px/s the fox runs at (and the world scrolls)
@@ -161,23 +162,8 @@ DIGITS = {
 }
 
 
-def scale(colour, k):
-    return tuple(min(255, int(v * k)) for v in colour)
-
-
 def mix(a, b, f):
     return tuple(int(a[i] + (b[i] - a[i]) * f) for i in range(3))
-
-
-def rand(*key):
-    """A repeatable pseudo-random number in [0, 1) for `key`, so a frame depends only on the time."""
-    h = 2166136261
-    for part in key:
-        for ch in str(part):
-            h = ((h ^ ord(ch)) * 16777619) & 0xFFFFFFFF
-    h ^= h >> 13
-    h = (h * 0x5BD1E995) & 0xFFFFFFFF
-    return (h ^ (h >> 15)) / 4294967296.0
 
 
 def tri(x):

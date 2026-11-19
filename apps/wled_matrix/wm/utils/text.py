@@ -5,6 +5,8 @@ Upper case only (lower case is drawn as upper case). Unknown characters are skip
 
 from .glyphs import BIG
 
+DAY_NAMES = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
+
 _TINY = {  # 3x5, rows top to bottom, 3 bits each
     "A": "010101111101101",
     "B": "110101110101110",
@@ -113,5 +115,8 @@ def draw_text(canvas, text, x, y, colour, font=TINY, scale=1):
 
 
 def text_width(text, font=TINY, scale=1):
-    widths = [(len(font[ch][0]) + 1) * scale for ch in str(text).upper() if ch in font]
+    """Width in pixels of `text` drawn in `font` (letters are upper case in the letter fonts; unknown ones take no
+    room). Works for the number fonts too, whose few lower-case keys (`k`, `h`) are kept as written."""
+    glyphs = [ch if ch in font else ch.upper() for ch in str(text)]
+    widths = [(len(font[ch][0]) + 1) * scale for ch in glyphs if ch in font]
     return sum(widths) - scale if widths else 0

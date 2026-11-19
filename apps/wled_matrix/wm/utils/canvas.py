@@ -6,10 +6,10 @@ out their own text rather than icon + number rows.
 """
 
 from .glyphs import BIG, ICONS, SMALL
-from .text import TEXT, TINY, draw_text
-from .text import text_width as _letters_width
+from .text import TEXT, TINY, draw_text, text_width
 
 BLACK = (0, 0, 0)
+GREY = (120, 120, 120)
 
 
 class Canvas:
@@ -74,11 +74,6 @@ def draw_mdi(canvas, coverage, x0, y0, colour):
                 canvas.put(x0 + x, y0 + y, tuple(int(ch * min(1.0, a * 1.2)) for ch in colour))
 
 
-def text_width(text, font, scale=1):
-    widths = [(len(font[ch][0]) + 1) * scale for ch in text if ch in font]
-    return sum(widths) - scale if widths else 0
-
-
 def scale(colour, k):
     """`colour` at brightness `k` (0..1)."""
     return tuple(max(0, min(255, int(v * k))) for v in colour)
@@ -105,7 +100,7 @@ class TextCanvas(Canvas):
                     self.put(x + gx, y + gy, colour)
 
     def text(self, s, x, y, colour, font=TEXT, align="left"):
-        w = _letters_width(s, font)
+        w = text_width(s, font)
         if align == "right":
             x -= w - 1
         elif align == "center":
@@ -114,7 +109,7 @@ class TextCanvas(Canvas):
 
     def number(self, num, unit, x, y, colour, align="left"):
         """A 5x7 number, then an optional 3x5 unit sitting on its baseline."""
-        w = _letters_width(num, TEXT) + (1 + _letters_width(unit, TINY) if unit else 0)
+        w = text_width(num, TEXT) + (1 + text_width(unit, TINY) if unit else 0)
         if align == "right":
             x -= w - 1
         elif align == "center":

@@ -3,8 +3,9 @@
 Pure Python, no dependencies. A frame is a list of (r, g, b) tuples, row by row.
 """
 
-from ..utils.canvas import Canvas, draw_mdi, text_width
+from ..utils.canvas import Canvas, draw_mdi
 from ..utils.glyphs import BIG, ICONS, SMALL
+from ..utils.text import text_width
 from ..utils.values import format_value, pick_colour, pick_icon, to_number
 from .base import Screen
 

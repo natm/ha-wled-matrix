@@ -22,6 +22,7 @@ import math
 from functools import lru_cache
 
 from ...utils.canvas import Canvas
+from ...utils.noise import rand
 from ..base import Screen
 
 HZ = 22  # horizon row
@@ -104,17 +105,6 @@ FONT = {
     "R": ["110", "101", "110", "101", "101"],
     "H": ["101", "101", "111", "101", "101"],
 }
-
-
-def rand(*key):
-    """A repeatable pseudo-random number in [0, 1) for `key`."""
-    h = 2166136261
-    for part in key:
-        for ch in str(part):
-            h = ((h ^ ord(ch)) * 16777619) & 0xFFFFFFFF
-    h ^= h >> 13
-    h = (h * 0x5BD1E995) & 0xFFFFFFFF
-    return (h ^ (h >> 15)) / 4294967296.0
 
 
 def mix(a, b, k):
