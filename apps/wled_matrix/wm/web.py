@@ -40,6 +40,8 @@ TEMPLATES = {  # starting YAML in the editor for a screen type; any other type g
     "rows": "rows:\n  - icon: mdi:thermometer\n    entity: sensor.outside_temperature\n    format: decimal1\n    unit: C\n"
     "  - icon: mdi:power-plug\n    entity: sensor.house_load_power\n    format: power\n",
     "camera": "camera: camera.front_door   # a camera entity\nfit: crop                   # crop or letterbox\ndwell: 15\n",
+    "clock": "clock:\n  style: classic   # classic, minimal, big, flip, sun, polar, rain, bounce or bars\n"
+    "  date: true       # the date too, where the style has room\ndwell: 30\n",
 }
 
 

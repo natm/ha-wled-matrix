@@ -14,6 +14,7 @@ apps/wled_matrix/
   wled_matrix.py        the AppDaemon app: rotation, timers, night dimming, the live view's routes
   wm/screens/           one module per screen type; base.py says what a screen is
   wm/screens/fun/       the animated screens that read no entities
+  wm/screens/clock/     the clock screen: one module per style, the Screen class in __init__.py
   wm/utils/             canvas and fonts, icons, value formatting, DDP, config placeholders
   wm/web.py             the live-view page
 tests/                  mirrors the package: tests/screens/, tests/screens/fun/, tests/utils/
