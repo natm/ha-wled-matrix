@@ -67,6 +67,7 @@ CONFIGS = {
               {"counter.w": "3", "counter.y": "40"}),
     "weather": ({"weather": {"weather": "weather.home"}}, {}),
     "tides": ({"tides": {"tides": "sensor.tide", "label": "PORT"}}, {}),
+    "clock": ({"clock": {"style": "flip", "date": True}}, {}),
     "aquarium": ({"aquarium": {}}, {}),
     "jungle": ({"jungle": {}}, {}),
     "platformer": ({"platformer": {"seed": 1}}, {}),
@@ -86,7 +87,7 @@ ATTRS = {
 
 class Registry(unittest.TestCase):
     def test_every_documented_type_is_registered(self):
-        documented = {"camera", "aircraft", "power_flow", "network", "stars", "weather", "tides",
+        documented = {"camera", "aircraft", "power_flow", "network", "stars", "weather", "tides", "clock",
                       "aquarium", "jungle", "platformer", "blocks", "surf", "quest", "kart", "duel"}  # fmt: skip
         self.assertEqual(set(Screen.registry), documented)
 

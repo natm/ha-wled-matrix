@@ -19,6 +19,7 @@ An [AppDaemon](https://appdaemon.readthedocs.io/) app that shows Home Assistant 
 - **Conditional and priority screens:** show a screen only while an entity is on, or let it interrupt the rotation (e.g. an alert).
 - **Animation:** a screen can set its own `frame_rate`, redrawn faster only while it's showing.
 - **Live view in a browser:** mirror what a matrix shows, or preview any screen at up to 30 frames a second, from AppDaemon's web server.
+- **Clock screen:** the time in nine animated styles, from a classic face with a sweeping second hand to a flip clock, a sun arc or digital rain, with the date if wanted.
 - **Stars screen:** weekly star points for children, with a WELL DONE pop-up when a star is earned.
 - **Network screen:** internet speed in big digits with the line in use and latency, and a failover alert.
 - **Night dimming:** dim every screen (and stop flashing and fast animation) between two times.
@@ -285,6 +286,23 @@ stars_alert:
 ```
 
 [Config docs](docs/screens/stars.md): every option for this screen.
+
+### Clock screen
+
+The time in one of nine animated styles, analog and digital, most with room for the date. It needs no entities.
+The hands sweep and the digits move at `frame_rate` (10 a second unless set) while the screen is showing.
+
+![Clock screen](docs/clock.png)
+
+```yaml
+    clock:
+      clock:
+        style: classic   # classic, minimal, big, flip, sun, polar, rain, bounce or bars
+        date: true       # optional: the date too (not on minimal or polar)
+      dwell: 30
+```
+
+[Config docs](docs/screens/clock.md): every option, with a note on each style.
 
 ### Aquarium screen
 
